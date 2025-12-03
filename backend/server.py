@@ -175,7 +175,7 @@ async def ai_web_search_medical_info(symptom: str, user_context: Dict[str, Any])
 def ai_enhanced_dietary_recommendations(symptom: str, user_context: Dict[str, Any]) -> Dict[str, List[str]]:
     """AI-enhanced dietary recommendations with personalization"""
     symptom_lower = symptom.lower()
-    age = user_context.get('age', 30)
+    age = user_context.get('age') or 30
     gender = user_context.get('gender', '').lower()
     
     # Enhanced dietary database with AI personalization
@@ -287,7 +287,7 @@ def ai_enhanced_dietary_recommendations(symptom: str, user_context: Dict[str, An
 def ai_enhanced_cause_analysis(symptom: str, user_context: Dict[str, Any]) -> List[Dict[str, str]]:
     """AI-enhanced possible cause analysis with confidence scoring"""
     symptom_lower = symptom.lower()
-    age = user_context.get('age', 30)
+    age = user_context.get('age') or 30
     
     causes_db = {
         "headache": [
@@ -347,7 +347,7 @@ def generate_ai_insights(symptom: str, user_context: Dict[str, Any]) -> List[Dic
     })
     
     # Personalized insight based on context
-    if user_context.get('age', 0) > 40:
+    if (user_context.get('age') or 0) > 40:
         insights.append({
             "insight_type": "Age-Related",
             "title": "Age-Specific Considerations",
