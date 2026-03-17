@@ -1,28 +1,31 @@
 import Script from "next/script";
-import { Fraunces, Inter } from "next/font/google";
+import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const dmSans = DM_Sans({
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
   variable: "--font-body",
 });
 
 const fraunces = Fraunces({
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
   variable: "--font-display",
 });
 
 export const metadata = {
-  title: "Smart Health Advisor AI",
+  title: "Vital",
   description:
-    "A polished health intelligence workspace with Google-authenticated access, longitudinal symptom tracking, and PubMed-backed educational guidance.",
+    "Vital is an educational health guidance workspace with symptom analysis, assistant support, voice tools, and research insights.",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} ${fraunces.variable} min-h-screen bg-mist font-body text-ink antialiased`}
+        className={`${dmSans.variable} ${fraunces.variable} min-h-screen bg-bg font-body text-stone-600 antialiased`}
       >
         <Script
           src="https://accounts.google.com/gsi/client"

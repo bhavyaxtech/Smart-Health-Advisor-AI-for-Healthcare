@@ -3,11 +3,34 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
-  --page-background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 24%),
-    radial-gradient(circle at 82% 10%, rgba(250, 204, 21, 0.14), transparent 20%),
-    linear-gradient(180deg, #f8fbff 0%, #f4f8fd 42%, #eef4fb 100%);
+  --bg: #eceae5;
+  --bg-deep: #e4e2dc;
+  --amber-50: #fdf8f0;
+  --amber-100: #faecd8;
+  --amber-200: #f5d4a8;
+  --amber-300: #edaf60;
+  --amber-400: #e09040;
+  --amber-500: #c97022;
+  --amber-600: #a85a14;
+  --amber-700: #7e420d;
+  --amber-800: #5a2f08;
+  --stone-50: #f9f8f6;
+  --stone-100: #f0eeea;
+  --stone-200: #dedad3;
+  --stone-300: #c8c3b9;
+  --stone-400: #a09990;
+  --stone-500: #776e64;
+  --stone-600: #5a5249;
+  --stone-700: #3e3830;
+  --stone-800: #252018;
+  --stone-900: #141008;
+  --sky-soft: #d4e8f0;
+  --sky-mid: #89b8cc;
+  --glass-bg: rgba(255, 253, 249, 0.58);
+  --glass-border: rgba(255, 255, 255, 0.78);
+  --glass-shadow: 0 8px 32px rgba(20, 16, 8, 0.07), 0 2px 8px rgba(20, 16, 8, 0.04);
+  --glass-shadow-md: 0 16px 48px rgba(20, 16, 8, 0.1), 0 4px 16px rgba(20, 16, 8, 0.05);
+  --glass-shadow-lg: 0 32px 80px rgba(20, 16, 8, 0.14), 0 8px 24px rgba(20, 16, 8, 0.07);
 }
 
 * {
@@ -20,7 +43,11 @@ html {
 
 body {
   margin: 0;
-  background: var(--page-background);
+  background: radial-gradient(circle at 15% 15%, rgba(233, 198, 149, 0.18), transparent 34%),
+    radial-gradient(circle at 90% 5%, rgba(137, 184, 204, 0.2), transparent 26%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  color: var(--stone-600);
+  font-family: var(--font-body), Arial, sans-serif;
 }
 
 a {
@@ -36,32 +63,111 @@ textarea {
 }
 
 ::selection {
-  background: rgba(14, 165, 233, 0.16);
+  background: rgba(201, 112, 34, 0.18);
 }
 
-.glass-panel {
-  @apply border border-white/70 bg-white/70 shadow-halo backdrop-blur-xl;
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), Georgia, serif;
+    color: var(--stone-900);
+    letter-spacing: -0.025em;
+  }
+
+  p,
+  span,
+  li,
+  label,
+  input,
+  textarea,
+  select,
+  button,
+  a {
+    font-family: var(--font-body), Arial, sans-serif;
+  }
 }
 
-.section-shell {
-  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
-.surface-card {
-  @apply rounded-[28px] border border-slate-200/80 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)];
+.glass-strong {
+  background: rgba(255, 252, 247, 0.76);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  box-shadow: var(--glass-shadow-md);
 }
 
-.surface-muted {
-  @apply rounded-[24px] border border-slate-200/70 bg-slate-50/90;
+.gradient-ring {
+  position: relative;
 }
 
-.eyebrow {
-  @apply inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.24em] text-sky-700;
+.gradient-ring::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.74),
+    rgba(224, 144, 64, 0.22),
+    rgba(137, 184, 204, 0.24)
+  );
+  z-index: -1;
+  pointer-events: none;
 }
 
-.subtle-grid {
-  background-image:
-    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
+.grain-overlay {
+  position: relative;
+}
+
+.grain-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  opacity: 0.2;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(20, 16, 8, 0.06) 0.5px, transparent 0.5px);
+  background-size: 2px 2px;
+}
+
+.hero-italic-accent {
+  position: relative;
+  font-style: italic;
+  font-weight: 300;
+  color: var(--amber-600);
+}
+
+.hero-italic-accent::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.18em;
+  height: 0.18em;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(201, 112, 34, 0.48), rgba(137, 184, 204, 0.4));
+}
+
+.fade-up {
+  animation: fade-up 0.7s ease both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

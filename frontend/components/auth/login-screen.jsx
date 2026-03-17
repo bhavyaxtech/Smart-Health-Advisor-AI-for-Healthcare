@@ -12,20 +12,12 @@ const GOOGLE_CLIENT_ID = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "").trim()
 function getGoogleCredential(clientId) {
   return new Promise((resolve, reject) => {
     if (!clientId) {
-      reject(
-        new Error(
-          "Google sign-in is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID first."
-        )
-      );
+      reject(new Error("Google sign-in is not configured."));
       return;
     }
 
     if (!window.google?.accounts?.id) {
-      reject(
-        new Error(
-          "Google sign-in library is not loaded yet. Please try again in a moment."
-        )
-      );
+      reject(new Error("Google sign-in is not ready yet. Please try again."));
       return;
     }
 
@@ -71,9 +63,7 @@ function getGoogleCredential(clientId) {
 
       if (notDisplayed || skipped || dismissed) {
         window.clearTimeout(timeoutId);
-        rejectOnce(
-          new Error("Google sign-in could not be completed from the browser prompt.")
-        );
+        rejectOnce(new Error("Google sign-in could not be completed."));
       }
     });
   });
@@ -100,51 +90,53 @@ export default function LoginScreen() {
       setAuthSession(authPayload);
       apiClient.setToken(authPayload.access_token);
       router.push("/app");
-    } catch (loginError) {
-      setError(loginError?.message || "Unable to sign in right now.");
+    } catch {
+      setError("Sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="section-shell flex min-h-screen items-center py-10">
-      <div className="grid w-full gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+    <main className="mx-auto flex min-h-screen w-full max-w-[1320px] items-center px-6 py-10 sm:px-8">
+      <div className="grid w-full gap-6 lg:grid-cols-[1fr_1fr]">
         <motion.section
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-          className="surface-card p-8 lg:p-10"
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="glass-strong rounded-[40px] p-8 sm:p-10"
         >
           <Link
             href="/"
-            className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+            className="inline-flex items-center gap-3 rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-700 transition duration-300 hover:border-amber-200 hover:text-amber-700"
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-xs font-black text-white">
-              SH
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500 font-display text-lg text-stone-50">
+              V
             </span>
-            Back to landing
+            Back to Vital
           </Link>
 
-          <div className="mt-8 max-w-xl">
-            <div className="eyebrow">Secure workspace access</div>
-            <h1 className="mt-5 font-display text-4xl font-black tracking-[-0.05em] text-slate-950">
-              Sign in and continue where the product gets useful.
+          <div className="mt-10">
+            <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium uppercase tracking-[0.22em] text-amber-700">
+              Secure access
+            </span>
+            <h1 className="mt-5 font-display text-[clamp(2.2rem,4vw,3.1rem)] font-normal leading-[1.15] text-stone-900">
+              Welcome back to your health workspace.
             </h1>
-            <p className="mt-4 text-base leading-8 text-slate-600">
-              Login unlocks history, credit tracking, dashboard summaries,
-              assistant follow-up, voice tools, and research-aware guidance.
+            <p className="mt-4 max-w-xl text-base font-light leading-[1.72] text-stone-400">
+              Sign in with Google to continue your symptom timeline, dashboard
+              trends, and guided follow-up.
             </p>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="mt-8 grid gap-3 sm:grid-cols-2">
             {[
-              "Private account-bound history",
-              "Google ID token -> backend verification",
-              "Cleaner SaaS-style workspace",
-              "No redirect-based OAuth complexity",
+              "Personalized workspace history",
+              "Calm, focused interface",
+              "Assistant and voice follow-up",
+              "5 analyses included",
             ].map((item) => (
-              <div key={item} className="surface-muted p-4 text-sm leading-7 text-slate-600">
+              <div key={item} className="glass rounded-2xl px-4 py-3 text-sm text-stone-600">
                 {item}
               </div>
             ))}
@@ -152,60 +144,39 @@ export default function LoginScreen() {
         </motion.section>
 
         <motion.section
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.08 }}
-          className="surface-card overflow-hidden border border-slate-200/80 bg-slate-950 p-8 text-white lg:p-10"
+          transition={{ duration: 0.7, delay: 0.08, ease: "easeOut" }}
+          className="glass-strong gradient-ring relative overflow-hidden rounded-[40px] p-8 sm:p-10"
         >
-          <div className="absolute inset-0 hidden" />
-          <div className="relative">
-            <div className="eyebrow border-white/10 bg-white/10 text-sky-100">
-              Google-only authentication
-            </div>
-            <h2 className="mt-5 text-3xl font-black tracking-[-0.05em] text-white">
-              Fast path to product value.
-            </h2>
-            <p className="mt-4 max-w-xl text-sm leading-8 text-slate-300">
-              The auth story is intentionally simple: Google identity in the
-              browser, backend verification, JWT session for application access.
-            </p>
+          <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-amber-200/40 blur-2xl" />
+          <div className="absolute -bottom-20 -left-12 h-48 w-48 rounded-full bg-sky-soft/50 blur-2xl" />
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
-                  Session model
-                </div>
-                <div className="mt-2 text-2xl font-black tracking-[-0.05em]">
-                  ID token to JWT
-                </div>
-              </div>
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
-                  Destination
-                </div>
-                <div className="mt-2 text-2xl font-black tracking-[-0.05em]">
-                  /app workspace
-                </div>
-              </div>
-            </div>
+          <div className="relative">
+            <h2 className="font-display text-[clamp(2rem,3.2vw,2.7rem)] font-normal text-stone-900">
+              Continue with Google
+            </h2>
+            <p className="mt-3 text-base font-light leading-[1.72] text-stone-400">
+              One tap sign-in, then straight into your Vital dashboard.
+            </p>
 
             <button
               type="button"
               onClick={handleLogin}
               disabled={loading}
-              className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-white px-6 py-4 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-amber-500 px-6 py-4 text-sm font-medium text-stone-50 transition duration-300 hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Connecting to Google..." : "Continue with Google"}
+              {loading ? "Signing in..." : "Continue with Google"}
             </button>
 
             {!GOOGLE_CLIENT_ID ? (
-              <div className="mt-4 rounded-[20px] border border-amber-300/20 bg-amber-300/10 p-4 text-sm leading-7 text-amber-100">
-                Missing <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code> in the frontend environment.
+              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                Google sign-in is currently unavailable in this environment.
               </div>
             ) : null}
 
             {error ? (
-              <div className="mt-4 rounded-[20px] border border-rose-300/20 bg-rose-300/10 p-4 text-sm leading-7 text-rose-100">
+              <div className="mt-4 rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm text-amber-800">
                 {error}
               </div>
             ) : null}
