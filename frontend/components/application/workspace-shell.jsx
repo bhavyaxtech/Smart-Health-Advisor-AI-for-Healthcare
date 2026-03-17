@@ -15,12 +15,61 @@ const tabs = ["analysis", "dashboard", "history", "assistant", "voice", "researc
 const DEFAULT_CREDITS = 5;
 const PATTERN_TIMEFRAMES = ["week", "month", "quarter"];
 const TAB_META = {
-  analysis: { icon: "AN", label: "Analysis" },
-  dashboard: { icon: "DB", label: "Dashboard" },
-  history: { icon: "HI", label: "History" },
-  assistant: { icon: "AS", label: "Assistant" },
-  voice: { icon: "VO", label: "Voice" },
-  research: { icon: "RE", label: "Research" },
+  analysis: {
+    label: "Analysis",
+    icon: (
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M6 9l2.3 2.3 3.8-3.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  dashboard: {
+    label: "Dashboard",
+    icon: (
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M5 11l2.5-3 2.5 2.5 3.5-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  history: {
+    label: "History",
+    icon: (
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <circle cx="9" cy="9" r="6.5" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M9 6v3l2 2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  assistant: {
+    label: "Assistant",
+    icon: (
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <path d="M3 5h12M3 9h8M3 13h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        <circle cx="14" cy="13" r="2.5" stroke="currentColor" strokeWidth="1.2" />
+      </svg>
+    ),
+  },
+  voice: {
+    label: "Voice",
+    icon: (
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <rect x="6.5" y="2" width="5" height="8" rx="2.5" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M3.5 9A5.5 5.5 0 009 14.5 5.5 5.5 0 0014.5 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        <line x1="9" y1="14.5" x2="9" y2="16.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  research: {
+    label: "Research",
+    icon: (
+      <svg viewBox="0 0 18 18" fill="none" width="16" height="16">
+        <circle cx="8" cy="8" r="5" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M12 12l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 };
 
 function formatDate(value) {
@@ -57,30 +106,36 @@ function probabilityToScore(probability) {
 
 function Panel({ title, subtitle, action, children }) {
   return (
-    <section className="glass-strong rounded-[30px] p-5 sm:p-6">
+    <section className="glass-strong rounded-[28px] p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-[clamp(1.6rem,2.4vw,2.25rem)] font-normal text-stone-900">
+          <h2 className="font-display text-[clamp(1.4rem,2.2vw,2rem)] font-normal text-stone-900">
             {title}
           </h2>
           {subtitle ? (
-            <p className="mt-2 max-w-3xl text-sm font-light leading-[1.72] text-stone-400">
+            <p className="mt-1.5 max-w-3xl text-sm font-light leading-[1.72] text-stone-400">
               {subtitle}
             </p>
           ) : null}
         </div>
         {action ? <div>{action}</div> : null}
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="mt-4">{children}</div>
     </section>
   );
 }
 
 function EmptyState({ title, body, action = null }) {
   return (
-    <div className="glass rounded-[24px] px-5 py-6 text-center">
-      <h3 className="text-2xl font-normal text-stone-900">{title}</h3>
-      <p className="mt-2 text-sm font-light leading-[1.72] text-stone-400">{body}</p>
+    <div className="glass rounded-[22px] px-5 py-8 text-center">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[rgba(201,112,34,0.08)]">
+        <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
+          <circle cx="10" cy="10" r="7.5" stroke="#c97022" strokeWidth="1.3" />
+          <path d="M10 7v3M10 13h.01" stroke="#c97022" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      </div>
+      <h3 className="font-display text-xl font-normal text-stone-900">{title}</h3>
+      <p className="mt-1.5 text-sm font-light leading-[1.72] text-stone-400">{body}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
@@ -477,7 +532,7 @@ export default function WorkspaceShell() {
             <button
               type="button"
               onClick={() => router.push("/login")}
-              className="rounded-full bg-amber-500 px-5 py-2 text-sm font-medium text-stone-50 transition duration-300 hover:bg-amber-600"
+              className="rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 px-5 py-2.5 text-sm text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               Go to login
             </button>
@@ -495,20 +550,20 @@ export default function WorkspaceShell() {
   return (
     <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-4 md:px-6 md:pb-8 md:pt-6">
       {loading.app ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/90 backdrop-blur-sm">
-          <div className="text-center">
-            <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500 font-display text-3xl text-stone-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(236,234,229,0.9)] backdrop-blur-md">
+          <div className="glass-strong flex flex-col items-center gap-4 rounded-[28px] px-10 py-8">
+            <div className="inline-flex h-14 w-14 items-center justify-center rounded-[16px] bg-gradient-to-br from-amber-500 to-amber-600 font-display text-2xl text-stone-50 shadow-[0_4px_20px_rgba(168,90,20,0.36)]">
               V
             </div>
-            <div className="mx-auto mt-4 h-8 w-8 animate-spin rounded-full border-2 border-amber-300 border-t-amber-700" />
-            <p className="mt-4 text-sm text-stone-400">Loading your health data...</p>
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-200 border-t-amber-600" />
+            <p className="text-sm text-stone-400">Loading your health data...</p>
           </div>
         </div>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-[auto_1fr]">
-        <aside className="hidden md:flex md:w-12 md:flex-col md:gap-3 lg:w-64">
-          <div className="glass-strong rounded-[24px] p-2 md:p-1.5 lg:p-3">
+        <aside className="hidden md:flex md:w-14 md:flex-col lg:w-60">
+          <div className="glass-strong flex flex-1 flex-col rounded-[24px] p-2 lg:p-3">
             <Link
               href="/"
               className="flex items-center gap-3 rounded-2xl px-2 py-2 text-stone-800 lg:bg-stone-50/70"
@@ -520,7 +575,6 @@ export default function WorkspaceShell() {
             </Link>
             <nav className="mt-3 space-y-2">
               {tabs.map((tab) => {
-                const selected = activeTab === tab;
                 return (
                   <button
                     key={tab}
@@ -530,16 +584,23 @@ export default function WorkspaceShell() {
                       setActiveTab(tab);
                       setMobileMoreOpen(false);
                     }}
-                    className={`group relative flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-sm transition duration-300 ${
-                      selected
-                        ? "bg-amber-500 text-stone-50"
-                        : "text-stone-600 hover:bg-stone-100"
+                    className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl px-2 py-2 text-sm transition duration-200 ${
+                      activeTab === tab
+                        ? "bg-[rgba(201,112,34,0.09)] text-amber-700"
+                        : "text-stone-500 hover:bg-[rgba(255,255,255,0.55)] hover:text-stone-700"
                     }`}
                   >
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-current/20 text-[11px] font-medium">
+                    <span className={`inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition duration-200 ${
+                      activeTab === tab
+                        ? "text-amber-700"
+                        : "text-stone-500 group-hover:text-stone-700"
+                    }`}>
                       {TAB_META[tab].icon}
                     </span>
                     <span className="hidden lg:inline">{TAB_META[tab].label}</span>
+                    {activeTab === tab && (
+                      <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-amber-500" />
+                    )}
                     <span className="pointer-events-none absolute left-full top-1/2 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-stone-900 px-2 py-1 text-xs text-stone-50 group-hover:block lg:hidden">
                       {TAB_META[tab].label}
                     </span>
@@ -547,11 +608,29 @@ export default function WorkspaceShell() {
                 );
               })}
             </nav>
+            <div className="mt-auto hidden border-t border-[rgba(20,16,8,0.06)] pt-3 lg:block">
+              <div className="flex items-center gap-2.5 rounded-2xl px-2 py-2">
+                {signedInUser?.picture ? (
+                  <img src={signedInUser.picture} alt="" className="h-7 w-7 rounded-full object-cover" />
+                ) : (
+                  <div className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-300 text-[11px] font-semibold text-white">
+                    {(signedInUser?.name || "U")[0].toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-stone-700">{signedInUser?.name || "User"}</p>
+                  <p className="truncate text-[10px] text-stone-400">{signedInUser?.email || ""}</p>
+                </div>
+                <div className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-medium text-white">
+                  {creditsRemaining}
+                </div>
+              </div>
+            </div>
           </div>
         </aside>
 
         <section className="space-y-4">
-          <header className="glass-strong gradient-ring rounded-[28px] px-5 py-5 sm:px-6">
+          <header className="glass-strong rounded-[28px] px-5 py-5 sm:px-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-[clamp(2rem,3vw,2.75rem)] font-normal text-stone-900">
@@ -566,14 +645,14 @@ export default function WorkspaceShell() {
                 <button
                   type="button"
                   onClick={() => refreshProtectedData()}
-                  className="rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm text-stone-600 transition duration-300 hover:border-amber-200 hover:text-amber-700"
+                  className="rounded-[10px] border border-[rgba(20,16,8,0.11)] bg-[rgba(255,252,248,0.68)] px-4 py-2 text-sm text-stone-600 backdrop-blur-sm transition duration-200 hover:bg-[rgba(255,252,248,0.9)] hover:border-[rgba(20,16,8,0.18)]"
                 >
                   {loading.app ? "Refreshing..." : "Refresh"}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleLogout()}
-                  className="rounded-full bg-amber-500 px-4 py-2 text-sm text-stone-50 transition duration-300 hover:bg-amber-600"
+                  className="rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 px-5 py-2.5 text-sm text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Sign out
                 </button>
@@ -581,23 +660,23 @@ export default function WorkspaceShell() {
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="glass rounded-2xl p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-stone-400">Status</p>
-                <p className="mt-2 font-display text-3xl text-stone-900">
+              <div className="glass rounded-[18px] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-stone-400">Status</p>
+                <p className="mt-1.5 font-display text-2xl leading-none text-stone-900">
                   {health?.status === "healthy" ? "Ready" : "Limited"}
                 </p>
               </div>
-              <div className="glass rounded-2xl p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-stone-400">Credits left</p>
-                <p className="mt-2 font-display text-3xl text-stone-900">{creditsRemaining}</p>
+              <div className="glass rounded-[18px] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-stone-400">Credits left</p>
+                <p className="mt-1.5 font-display text-2xl leading-none text-stone-900">{creditsRemaining}</p>
               </div>
-              <div className="glass rounded-2xl p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-stone-400">Stored analyses</p>
-                <p className="mt-2 font-display text-3xl text-stone-900">{history.length}</p>
+              <div className="glass rounded-[18px] px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-stone-400">Stored analyses</p>
+                <p className="mt-1.5 font-display text-2xl leading-none text-stone-900">{history.length}</p>
               </div>
-              <div className="glass rounded-2xl p-4">
-                <p className={`text-xs uppercase tracking-[0.16em] ${scoreTone}`}>Health score</p>
-                <p className="mt-2 font-display text-3xl text-stone-900">
+              <div className="glass rounded-[18px] px-4 py-3">
+                <p className={`text-[10px] uppercase tracking-[0.16em] ${scoreTone}`}>Health score</p>
+                <p className="mt-1.5 font-display text-2xl leading-none text-stone-900">
                   {dashboard?.health_score ?? "—"}
                 </p>
               </div>
@@ -605,7 +684,7 @@ export default function WorkspaceShell() {
           </header>
 
           {health?.status === "degraded" ? (
-            <div className="rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm text-amber-800">
+            <div className="rounded-[14px] border border-[rgba(201,112,34,0.25)] bg-[rgba(201,112,34,0.08)] px-4 py-3 text-sm text-amber-800 backdrop-blur-sm">
               <p>Some features may be temporarily limited.</p>
               {(health?.degraded_features || []).length ? (
                 <ul className="mt-2 list-disc pl-5">
@@ -618,19 +697,19 @@ export default function WorkspaceShell() {
           ) : null}
 
           {successMessage ? (
-            <div className="flex items-start justify-between gap-3 rounded-2xl border border-[#cfd9cd] bg-[#e6eee4] px-4 py-3 text-sm text-stone-700">
+            <div className="flex items-start justify-between gap-3 rounded-[14px] border border-[rgba(20,100,40,0.15)] bg-[rgba(20,100,40,0.06)] px-4 py-3 text-sm text-stone-700 backdrop-blur-sm">
               <span>{successMessage}</span>
-              <button type="button" onClick={() => setSuccessMessage("")} className="text-stone-600">
-                X
+              <button type="button" onClick={() => setSuccessMessage("")} className="flex-shrink-0 text-stone-500 hover:text-stone-700">
+                <svg viewBox="0 0 12 12" fill="none" width="12" height="12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
               </button>
             </div>
           ) : null}
 
           {errorMessage ? (
-            <div className="flex items-start justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-100 px-4 py-3 text-sm text-amber-800">
+            <div className="flex items-start justify-between gap-3 rounded-[14px] border border-[rgba(201,112,34,0.25)] bg-[rgba(201,112,34,0.08)] px-4 py-3 text-sm text-amber-800 backdrop-blur-sm">
               <span>{errorMessage}</span>
-              <button type="button" onClick={() => setErrorMessage("")} className="text-amber-800">
-                X
+              <button type="button" onClick={() => setErrorMessage("")} className="flex-shrink-0 text-amber-600 hover:text-amber-800">
+                <svg viewBox="0 0 12 12" fill="none" width="12" height="12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
               </button>
             </div>
           ) : null}
@@ -644,7 +723,7 @@ export default function WorkspaceShell() {
                   <button
                     type="button"
                     onClick={retryHealth}
-                    className="rounded-full bg-amber-500 px-5 py-2 text-sm text-stone-50 transition duration-300 hover:bg-amber-600"
+                    className="rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 px-5 py-2.5 text-sm text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Retry
                   </button>
@@ -653,24 +732,23 @@ export default function WorkspaceShell() {
             </Panel>
           ) : (
             <>
-              <div className="hidden flex-wrap gap-2 md:flex">
-                {tabs.map((tab) => {
-                  const selected = activeTab === tab;
-                  return (
+              <div className="hidden md:block">
+                <div className="glass inline-flex gap-0.5 rounded-[14px] p-1">
+                  {tabs.map((tab) => (
                     <button
                       key={tab}
                       type="button"
                       onClick={() => setActiveTab(tab)}
-                      className={`rounded-full px-4 py-2 text-sm transition duration-300 ${
-                        selected
-                          ? "bg-amber-500 text-stone-50"
-                          : "border border-stone-200 bg-stone-50 text-stone-600 hover:border-amber-200 hover:text-amber-700"
+                      className={`rounded-[10px] px-3.5 py-1.5 text-sm transition duration-200 ${
+                        activeTab === tab
+                          ? "bg-amber-500 text-stone-50 shadow-[0_2px_8px_rgba(168,90,20,0.28)]"
+                          : "text-stone-500 hover:bg-[rgba(255,255,255,0.6)] hover:text-stone-700"
                       }`}
                     >
                       {labelize(tab)}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
 
               <AnimatePresence mode="wait">
@@ -700,7 +778,7 @@ export default function WorkspaceShell() {
                                 additionalInfo: "",
                               })
                             }
-                            className="rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm text-stone-600 transition duration-300 hover:border-amber-200 hover:text-amber-700"
+                            className="rounded-[10px] border border-[rgba(20,16,8,0.11)] bg-[rgba(255,252,248,0.68)] px-4 py-2 text-sm text-stone-600 backdrop-blur-sm transition duration-200 hover:bg-[rgba(255,252,248,0.9)] hover:border-[rgba(20,16,8,0.18)]"
                           >
                             Reset form
                           </button>
@@ -717,7 +795,7 @@ export default function WorkspaceShell() {
                               onChange={(event) =>
                                 setForm((current) => ({ ...current, symptom: event.target.value }))
                               }
-                              className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                              className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                               placeholder="e.g. headache with nausea"
                             />
                           </div>
@@ -728,7 +806,7 @@ export default function WorkspaceShell() {
                               onChange={(event) =>
                                 setForm((current) => ({ ...current, duration: event.target.value }))
                               }
-                              className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                              className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                               placeholder="e.g. 2 days"
                             />
                           </div>
@@ -739,7 +817,7 @@ export default function WorkspaceShell() {
                               onChange={(event) =>
                                 setForm((current) => ({ ...current, severity: event.target.value }))
                               }
-                              className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                              className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                             >
                               <option value="">Select</option>
                               <option value="low">Low</option>
@@ -755,7 +833,7 @@ export default function WorkspaceShell() {
                               onChange={(event) =>
                                 setForm((current) => ({ ...current, age: event.target.value }))
                               }
-                              className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                              className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                               placeholder="e.g. 34"
                             />
                           </div>
@@ -766,7 +844,7 @@ export default function WorkspaceShell() {
                               onChange={(event) =>
                                 setForm((current) => ({ ...current, gender: event.target.value }))
                               }
-                              className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                              className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                               placeholder="Optional"
                             />
                           </div>
@@ -778,7 +856,7 @@ export default function WorkspaceShell() {
                               onChange={(event) =>
                                 setForm((current) => ({ ...current, medicalHistory: event.target.value }))
                               }
-                              className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                              className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                               placeholder="Optional background information"
                             />
                           </div>
@@ -790,7 +868,7 @@ export default function WorkspaceShell() {
                               onChange={(event) =>
                                 setForm((current) => ({ ...current, additionalInfo: event.target.value }))
                               }
-                              className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                              className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                               placeholder="Any extra context"
                             />
                           </div>
@@ -798,7 +876,7 @@ export default function WorkspaceShell() {
                             <button
                               type="submit"
                               disabled={loading.analysis || degraded}
-                              className="rounded-full bg-amber-500 px-6 py-3 text-sm text-stone-50 transition duration-300 hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 px-5 py-2.5 text-sm text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {loading.analysis ? "Analyzing..." : "Analyze symptom"}
                             </button>
@@ -817,16 +895,16 @@ export default function WorkspaceShell() {
                           />
                         ) : (
                           <div className="space-y-4">
-                            <div className="flex flex-wrap gap-2">
+                            <div className="glass inline-flex gap-0.5 rounded-[12px] p-1">
                               {["overview", "causes", "care", "insights"].map((tab) => (
                                 <button
                                   key={tab}
                                   type="button"
                                   onClick={() => setAnalysisTab(tab)}
-                                  className={`rounded-full px-4 py-2 text-sm transition duration-300 ${
+                                  className={`rounded-[8px] px-3 py-1.5 text-sm transition duration-200 ${
                                     analysisTab === tab
-                                      ? "bg-amber-500 text-stone-50"
-                                      : "border border-stone-200 bg-stone-50 text-stone-600 hover:border-amber-200 hover:text-amber-700"
+                                      ? "bg-amber-500 text-stone-50 shadow-[0_2px_8px_rgba(168,90,20,0.28)]"
+                                      : "text-stone-500 hover:bg-[rgba(255,255,255,0.6)] hover:text-stone-700"
                                   }`}
                                 >
                                   {labelize(tab)}
@@ -856,16 +934,16 @@ export default function WorkspaceShell() {
                       subtitle="Review trends and run pattern analysis by timeframe."
                       action={
                         <div className="flex flex-wrap items-center gap-2">
-                          <div className="flex rounded-full border border-stone-200 bg-stone-50 p-1">
+                          <div className="glass inline-flex gap-0.5 rounded-[12px] p-1">
                             {PATTERN_TIMEFRAMES.map((option) => (
                               <button
                                 key={option}
                                 type="button"
                                 onClick={() => setPatternTimeframe(option)}
-                                className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.14em] transition duration-300 ${
+                                className={`rounded-[8px] px-3 py-1 text-xs uppercase tracking-[0.14em] transition duration-200 ${
                                   patternTimeframe === option
-                                    ? "bg-amber-500 text-stone-50"
-                                    : "text-stone-500"
+                                    ? "bg-amber-500 text-stone-50 shadow-[0_2px_8px_rgba(168,90,20,0.28)]"
+                                    : "text-stone-500 hover:bg-[rgba(255,255,255,0.6)]"
                                 }`}
                               >
                                 {labelize(option)}
@@ -886,7 +964,7 @@ export default function WorkspaceShell() {
                               )
                             }
                             disabled={loading.pattern || degraded}
-                            className="rounded-full bg-amber-500 px-4 py-2 text-sm text-stone-50 transition duration-300 hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 px-5 py-2.5 text-sm text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {loading.pattern ? "Running..." : "Run Pattern Analysis"}
                           </button>
@@ -1097,13 +1175,13 @@ export default function WorkspaceShell() {
                           <input
                             value={chatMessage}
                             onChange={(event) => setChatMessage(event.target.value)}
-                            className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                            className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                             placeholder="Ask a follow-up question..."
                           />
                           <button
                             type="submit"
                             disabled={loading.chat || degraded}
-                            className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-lg text-stone-50 transition duration-300 hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex h-12 w-12 items-center justify-center rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 text-lg text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
                             aria-label="Send message"
                           >
                             &gt;
@@ -1147,19 +1225,19 @@ export default function WorkspaceShell() {
                             rows={5}
                             value={voiceText}
                             onChange={(event) => setVoiceText(event.target.value)}
-                            className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                            className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                             placeholder="Paste voice transcript..."
                           />
                           <input
                             value={voiceConfidence}
                             onChange={(event) => setVoiceConfidence(event.target.value)}
-                            className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                            className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                             placeholder="Confidence (e.g. 0.90)"
                           />
                           <button
                             type="submit"
                             disabled={loading.voice || degraded}
-                            className="rounded-full bg-amber-500 px-6 py-3 text-sm text-stone-50 transition duration-300 hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 px-5 py-2.5 text-sm text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {loading.voice ? "Processing..." : "Analyse Voice Input"}
                           </button>
@@ -1229,13 +1307,13 @@ export default function WorkspaceShell() {
                         <input
                           value={researchQuery}
                           onChange={(event) => setResearchQuery(event.target.value)}
-                          className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm outline-none transition duration-300 focus:border-amber-300"
+                          className="w-full rounded-[12px] border border-[rgba(20,16,8,0.10)] bg-[rgba(255,252,248,0.8)] px-4 py-3 text-sm text-stone-800 outline-none transition duration-200 placeholder:text-stone-400 focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(201,112,34,0.10)] focus:bg-[rgba(255,252,248,0.95)]"
                           placeholder="e.g. migraine triggers and nutrition"
                         />
                         <button
                           type="submit"
                           disabled={loading.research || degraded}
-                          className="rounded-full bg-amber-500 px-6 py-3 text-sm text-stone-50 transition duration-300 hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="rounded-[10px] bg-gradient-to-br from-amber-500 to-amber-600 px-5 py-2.5 text-sm text-stone-50 shadow-[0_2px_10px_rgba(168,90,20,0.28)] transition duration-200 hover:-translate-y-px hover:shadow-[0_4px_16px_rgba(168,90,20,0.36)] disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {loading.research ? "Searching..." : "Search"}
                         </button>
@@ -1266,7 +1344,7 @@ export default function WorkspaceShell() {
                                 href={researchResponse.pubmed_url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-stone-600 transition duration-300 hover:border-amber-200 hover:text-amber-700"
+                                className="rounded-[10px] border border-[rgba(20,16,8,0.11)] bg-[rgba(255,252,248,0.68)] px-4 py-2 text-sm text-stone-600 backdrop-blur-sm transition duration-200 hover:bg-[rgba(255,252,248,0.9)] hover:border-[rgba(20,16,8,0.18)]"
                               >
                                 Open source link
                               </a>
@@ -1305,7 +1383,7 @@ export default function WorkspaceShell() {
                       : "text-stone-600 hover:bg-stone-100"
                   }`}
                 >
-                  <div className="mx-auto inline-flex h-6 w-6 items-center justify-center rounded-md border border-current/20 text-[10px]">
+                  <div className="mx-auto inline-flex h-6 w-6 items-center justify-center rounded-md">
                     {TAB_META[tab].icon}
                   </div>
                   <div className="mt-1">{TAB_META[tab].label}</div>
