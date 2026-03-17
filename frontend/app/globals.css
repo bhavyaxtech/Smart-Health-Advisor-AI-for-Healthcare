@@ -67,6 +67,7 @@ textarea {
 }
 
 @layer base {
+
   h1,
   h2,
   h3,
@@ -114,12 +115,10 @@ textarea {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(
-    120deg,
-    rgba(255, 255, 255, 0.74),
-    rgba(224, 144, 64, 0.22),
-    rgba(137, 184, 204, 0.24)
-  );
+  background: linear-gradient(120deg,
+      rgba(255, 255, 255, 0.74),
+      rgba(224, 144, 64, 0.22),
+      rgba(137, 184, 204, 0.24));
   z-index: -1;
   pointer-events: none;
 }
@@ -166,8 +165,39 @@ textarea {
     opacity: 0;
     transform: translateY(22px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Add these keyframes to the END of your existing globals.css */
+
+@keyframes floatOrb {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(28px, -38px) scale(1.04);
+  }
+
+  66% {
+    transform: translate(-18px, 22px) scale(0.97);
+  }
+}
+
+@keyframes floatCard {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-9px);
   }
 }
