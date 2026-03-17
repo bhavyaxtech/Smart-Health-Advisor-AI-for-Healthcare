@@ -126,7 +126,7 @@ export default function LandingPage() {
   return (
     <>
       {/* Ambient orb layer */}
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div className="absolute -left-32 -top-44 h-[700px] w-[700px] rounded-full blur-[88px]"
           style={{ background: "radial-gradient(circle,rgba(201,112,34,0.14) 0%,transparent 70%)", animation: "floatOrb 22s ease-in-out infinite" }} />
         <div className="absolute -right-20 top-16 h-[600px] w-[600px] rounded-full blur-[88px]"
@@ -158,9 +158,9 @@ export default function LandingPage() {
             <span className="font-display text-xl font-normal text-stone-900">Vital</span>
           </Link>
 
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-1 min-[920px]:flex">
             {["Features", "How it works", "Privacy", "About"].map((item) => (
-              <a key={item} href="#" className="rounded-lg px-3 py-1.5 text-sm text-stone-500 transition duration-200 hover:bg-white/55 hover:text-stone-800">
+              <a key={item} href="#" className="rounded-lg px-3 py-1.5 text-[0.855rem] text-stone-500 transition duration-200 hover:bg-white/55 hover:text-stone-800">
                 {item}
               </a>
             ))}
@@ -171,7 +171,7 @@ export default function LandingPage() {
               Sign in
             </Link>
             <Link href="/login"
-              className="rounded-[10px] px-4 py-1.5 text-sm font-medium text-stone-50 transition duration-200 hover:-translate-y-px"
+              className="hidden rounded-[10px] px-4 py-1.5 text-sm font-medium text-stone-50 transition duration-200 hover:-translate-y-px min-[920px]:inline-flex"
               style={{ background: "linear-gradient(135deg,#c97022,#a85a14)", boxShadow: "0 2px 12px rgba(168,90,20,0.32)" }}>
               Get started
             </Link>
@@ -179,10 +179,10 @@ export default function LandingPage() {
         </header>
       </div>
 
-      <main className="mx-auto w-full max-w-[1200px] px-6 pb-24 pt-28 sm:px-8">
+      <main className="relative z-10 mx-auto w-full max-w-[1200px] px-6 pb-24 pt-28 sm:px-8">
 
         {/* ── Hero ── */}
-        <section className="grid items-center gap-8 min-[960px]:grid-cols-[1fr_1fr]">
+        <section className="grid items-center gap-8 min-[920px]:grid-cols-[1fr_1fr]">
 
           {/* Left copy */}
           <motion.div
@@ -212,7 +212,7 @@ export default function LandingPage() {
             {/* Sub */}
             <motion.p custom={0.16} variants={fadeUp}
               className="mt-6 max-w-[430px] text-base font-light leading-[1.78] text-stone-400">
-              Describe how you're feeling. Get evidence-based insights, a personalised diet plan, and clear guidance — in seconds.
+              Describe how you&apos;re feeling. Get evidence-based insights, a personalised diet plan, and clear guidance — in seconds.
             </motion.p>
 
             {/* CTAs */}
@@ -255,19 +255,19 @@ export default function LandingPage() {
             className="relative"
           >
             {/* Floating mini cards */}
-            <div className="glass absolute -left-7 top-14 z-10 hidden rounded-[14px] px-4 py-3 min-[960px]:block"
+            <div className="glass absolute -left-7 top-14 z-10 hidden rounded-[14px] px-4 py-3 min-[920px]:block"
               style={{ animation: "floatCard 8s ease-in-out infinite" }}>
               <p className="text-[11px] uppercase tracking-[0.07em] text-stone-400">Sleep Quality</p>
               <p className="font-display text-[1.35rem] font-normal leading-none text-stone-900">87<span className="text-sm text-stone-400">/100</span></p>
               <p className="mt-1 text-[11px] font-medium text-amber-600">↑ 12% this week</p>
             </div>
-            <div className="glass absolute -right-4 top-4 z-10 hidden rounded-[14px] px-4 py-3 min-[960px]:block"
+            <div className="glass absolute -right-4 top-4 z-10 hidden rounded-[14px] px-4 py-3 min-[920px]:block"
               style={{ animation: "floatCard 7s ease-in-out infinite -5s" }}>
               <p className="text-[11px] uppercase tracking-[0.07em] text-stone-400">Analyses done</p>
               <p className="font-display text-[1.35rem] font-normal leading-none text-stone-900">4</p>
               <p className="mt-1 text-[11px] font-medium text-amber-600">1 credit left</p>
             </div>
-            <div className="glass absolute -left-4 bottom-20 z-10 hidden rounded-[14px] px-4 py-3 min-[960px]:block"
+            <div className="glass absolute -left-4 bottom-20 z-10 hidden rounded-[14px] px-4 py-3 min-[920px]:block"
               style={{ animation: "floatCard 10s ease-in-out infinite -3s" }}>
               <p className="text-[11px] uppercase tracking-[0.07em] text-stone-400">Stress Index</p>
               <p className="font-display text-[1.35rem] font-normal leading-none text-stone-900">Low</p>
@@ -292,7 +292,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.08)] px-2.5 py-1 text-[11px] font-medium text-amber-700">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" style={{ animation: "pulseDot 2s ease-in-out infinite" }} />
                   Live
                 </div>
               </div>
@@ -389,7 +389,7 @@ export default function LandingPage() {
           className="mt-10"
         >
           <div className="mb-10 text-center">
-            <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-xs font-medium uppercase tracking-[0.1em] text-amber-700">
+            <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-[0.74rem] font-medium uppercase tracking-[0.1em] text-amber-700">
               What Vital does
             </span>
             <h2 className="mt-4 font-display font-normal text-stone-900" style={{ fontSize: "clamp(1.9rem,3vw,2.75rem)", letterSpacing: "-0.022em" }}>
@@ -399,13 +399,12 @@ export default function LandingPage() {
               From symptom analysis to personalised diet plans — a complete picture of your wellbeing.
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 min-[600px]:grid-cols-2 min-[920px]:grid-cols-3">
             {featureCards.map((card) => (
               <motion.article key={card.title} variants={fadeUp}
-                className="glass relative overflow-hidden rounded-[20px] p-6 transition duration-200 hover:-translate-y-1"
-                style={{ boxShadow: "0 8px 32px rgba(20,16,8,0.07)" }}>
+                className="glass relative overflow-hidden rounded-[20px] p-6 transition duration-200 hover:-translate-y-1 hover:shadow-glass-lg">
                 <div className="absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.78),transparent)" }} />
-                <div className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-[13px] ${icoStyles[card.color]}`}>
+                <div className={`mb-4 inline-flex h-[46px] w-[46px] items-center justify-center rounded-[13px] ${icoStyles[card.color]}`}>
                   {card.icon}
                 </div>
                 <h3 className="font-display text-lg font-normal text-stone-800">{card.title}</h3>
@@ -423,7 +422,7 @@ export default function LandingPage() {
         {/* ── How it works ── */}
         <section className="mt-10" id="how">
           <div className="mb-10 text-center">
-            <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-xs font-medium uppercase tracking-[0.1em] text-amber-700">
+            <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-[0.74rem] font-medium uppercase tracking-[0.1em] text-amber-700">
               Simple process
             </span>
             <h2 className="mt-4 font-display font-normal text-stone-900" style={{ fontSize: "clamp(1.9rem,3vw,2.75rem)", letterSpacing: "-0.022em" }}>
@@ -433,9 +432,14 @@ export default function LandingPage() {
               No forms, no appointments. Just describe how you feel and Vital does the rest.
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="relative grid gap-4 sm:grid-cols-3">
+            {/* Dashed connector line — desktop only */}
+            <div className="pointer-events-none absolute left-0 right-0 top-[29px] z-0 hidden items-center sm:flex"
+              aria-hidden="true">
+              <div className="mx-auto w-[60%] border-t-2 border-dashed border-[rgba(201,112,34,0.22)]" />
+            </div>
             {steps.map((step) => (
-              <div key={step.num} className="glass relative rounded-[20px] p-6">
+              <div key={step.num} className="glass relative z-10 rounded-[20px] p-6">
                 <div className="absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.78),transparent)" }} />
                 <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(201,112,34,0.28)] bg-[rgba(255,252,248,0.85)] font-display text-base font-normal text-amber-600"
                   style={{ boxShadow: "0 2px 8px rgba(201,112,34,0.10)" }}>
@@ -457,7 +461,7 @@ export default function LandingPage() {
                 style={{ background: "radial-gradient(circle,rgba(201,112,34,0.10),transparent 70%)" }} />
             </div>
             <div className="relative z-10">
-              <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-xs font-medium uppercase tracking-[0.1em] text-amber-700">
+              <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-[0.74rem] font-medium uppercase tracking-[0.1em] text-amber-700">
                 Start today
               </span>
               <h2 className="mx-auto mt-4 max-w-[560px] font-display font-normal text-stone-900" style={{ fontSize: "clamp(2rem,3.8vw,3.1rem)", lineHeight: 1.14, letterSpacing: "-0.024em" }}>
@@ -493,7 +497,7 @@ export default function LandingPage() {
               <a key={item} href="#" className="text-xs text-stone-400 transition hover:text-stone-700">{item}</a>
             ))}
           </div>
-          <p className="text-xs text-stone-400">© 2025 Vital. Not a substitute for professional medical advice.</p>
+          <p className="text-xs text-stone-400">© 2026 Vital. Not a substitute for professional medical advice.</p>
         </footer>
       </main>
     </>

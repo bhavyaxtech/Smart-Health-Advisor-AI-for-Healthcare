@@ -93,27 +93,30 @@ function probabilityToScore(probability) {
 /* ── design components ── */
 function Panel({ title, subtitle, action, children }) {
   return (
-    <section className="glass-strong rounded-[28px] p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="font-display font-normal text-stone-900" style={{ fontSize: "clamp(1.4rem,2.2vw,2rem)" }}>
-            {title}
-          </h2>
-          {subtitle && (
-            <p className="mt-1.5 max-w-3xl text-sm font-light leading-[1.72] text-stone-400">{subtitle}</p>
-          )}
+    <section className="glass rounded-[20px] p-6 sm:p-7">
+      {(title || action) && (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            {title && (
+              <h2 className="font-display text-[1rem] font-normal text-stone-800">{title}</h2>
+            )}
+            {subtitle && (
+              <p className="mt-1 max-w-3xl text-[0.855rem] font-light leading-[1.72] text-stone-400">{subtitle}</p>
+            )}
+          </div>
+          {action && <div>{action}</div>}
         </div>
-        {action && <div>{action}</div>}
-      </div>
-      <div className="mt-4">{children}</div>
+      )}
+      {(title || action) && <div className="mt-3 border-t border-[rgba(20,16,8,0.06)]" />}
+      <div className={title || action ? "mt-4" : ""}>{children}</div>
     </section>
   );
 }
 
 function EmptyState({ title, body, action = null }) {
   return (
-    <div className="glass rounded-[22px] px-5 py-8 text-center">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[14px] bg-[rgba(201,112,34,0.08)]">
+    <div className="glass rounded-[20px] px-5 py-8 text-center">
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-chip bg-[rgba(201,112,34,0.08)]">
         <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
           <circle cx="10" cy="10" r="7.5" stroke="#c97022" strokeWidth="1.3" />
           <path d="M10 7v3M10 13h.01" stroke="#c97022" strokeWidth="1.4" strokeLinecap="round" />
@@ -365,7 +368,7 @@ export default function WorkspaceShell() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] px-4 pb-24 pt-4 md:px-6 md:pb-8 md:pt-6">
+    <main className="flex h-screen w-full overflow-hidden">
 
       {/* Loading overlay */}
       {loading.app ? (
@@ -379,11 +382,9 @@ export default function WorkspaceShell() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-[auto_1fr]">
-
         {/* ── Sidebar ── */}
-        <aside className="hidden md:flex md:w-14 md:flex-col lg:w-60">
-          <div className="glass-strong flex flex-1 flex-col rounded-[24px] p-2 lg:p-3">
+        <aside className="hidden flex-shrink-0 md:flex md:w-12 md:flex-col lg:w-[220px]">
+          <div className="glass flex flex-1 flex-col border-r border-[rgba(255,255,255,0.6)] p-2 lg:p-3">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-3 rounded-2xl px-2 py-2">
               <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl font-display text-sm text-stone-50"
@@ -401,16 +402,14 @@ export default function WorkspaceShell() {
                     type="button"
                     title={TAB_META[tab].label}
                     onClick={() => { setActiveTab(tab); setMobileMoreOpen(false); }}
-                    className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl px-2 py-2 text-sm transition duration-200 ${active ? "bg-[rgba(201,112,34,0.09)] text-amber-700" : "text-stone-500 hover:bg-[rgba(255,255,255,0.55)] hover:text-stone-700"
+                    className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl px-2 py-2 text-[0.875rem] transition-all duration-[160ms] ease-out ${active ? "bg-amber-50 text-amber-700" : "text-stone-500 hover:bg-[rgba(255,255,255,0.55)] hover:text-stone-700"
                       }`}
                   >
-                    {/* Active bar */}
                     {active && <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-amber-500" />}
-                    <span className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition duration-200">
+                    <span className="inline-flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center">
                       {TAB_META[tab].icon}
                     </span>
                     <span className="hidden lg:inline">{TAB_META[tab].label}</span>
-                    {/* Tooltip on icon-only mode */}
                     <span className="pointer-events-none absolute left-full top-1/2 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-stone-900 px-2 py-1 text-xs text-stone-50 group-hover:block lg:hidden">
                       {TAB_META[tab].label}
                     </span>
@@ -434,7 +433,7 @@ export default function WorkspaceShell() {
                   <p className="truncate text-xs font-medium text-stone-700">{signedInUser?.name || "User"}</p>
                   <p className="truncate text-[10px] text-stone-400">{signedInUser?.email || ""}</p>
                 </div>
-                <div className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+                <div className="rounded-full px-2 py-0.5 font-display text-[10px] font-medium text-white"
                   style={{ background: "linear-gradient(135deg,#c97022,#a85a14)" }}>
                   {creditsRemaining}
                 </div>
@@ -443,46 +442,35 @@ export default function WorkspaceShell() {
           </div>
         </aside>
 
-        {/* ── Main content ── */}
-        <section className="space-y-4">
+        {/* ── Main content column ── */}
+        <div className="flex flex-1 flex-col overflow-hidden">
 
-          {/* Header */}
-          <header className="glass-strong rounded-[28px] px-5 py-5 sm:px-6">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <h1 className="font-display font-normal text-stone-900" style={{ fontSize: "clamp(1.8rem,3vw,2.5rem)" }}>
-                  Welcome, {signedInUser?.name || "there"}
-                </h1>
-                <p className="mt-1.5 text-sm font-light leading-[1.72] text-stone-400">
-                  Manage analysis, trends, history, assistant, voice, and research in one place.
-                </p>
+          {/* TopBar */}
+          <header className="glass flex h-14 flex-shrink-0 items-center justify-between border-b border-[rgba(20,16,8,0.06)] px-5 sm:px-8">
+            <h1 className="font-display text-[1.1rem] font-normal text-stone-900">
+              {TAB_META[activeTab]?.label || "Workspace"}
+            </h1>
+            <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700 sm:flex">
+                <span className="font-display">{creditsRemaining}</span> credits
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => refreshProtectedData()} className={btnGhost}>
-                  {loading.app ? "Refreshing..." : "Refresh"}
-                </button>
-                <button type="button" onClick={() => handleLogout()} className={`${btnPrimary}`}
-                  style={{ background: "linear-gradient(135deg,#c97022,#a85a14)" }}>
-                  Sign out
-                </button>
-              </div>
-            </div>
-
-            {/* Metric chips */}
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[
-                { label: "Status", value: health?.status === "healthy" ? "Ready" : "Limited" },
-                { label: "Credits left", value: creditsRemaining },
-                { label: "Stored analyses", value: history.length },
-                { label: "Health score", value: dashboard?.health_score ?? "—", tone: scoreTone },
-              ].map(({ label, value, tone }) => (
-                <div key={label} className="glass rounded-[18px] px-4 py-3">
-                  <p className={`text-[10px] uppercase tracking-[0.16em] ${tone || "text-stone-400"}`}>{label}</p>
-                  <p className="mt-1.5 font-display text-2xl leading-none text-stone-900">{value}</p>
+              <span className={`h-2 w-2 rounded-full ${health?.status === "healthy" ? "bg-emerald-500" : health?.status === "degraded" ? "bg-amber-500" : "bg-red-400"}`} title={health?.status || "unknown"} />
+              {signedInUser?.picture ? (
+                <img src={signedInUser.picture} alt="" className="h-7 w-7 rounded-full object-cover" />
+              ) : (
+                <div className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+                  style={{ background: "linear-gradient(135deg,#e09040,#edaf60)" }}>
+                  {(signedInUser?.name || "U")[0].toUpperCase()}
                 </div>
-              ))}
+              )}
+              <button type="button" onClick={() => handleLogout()} className="hidden text-xs text-stone-500 transition hover:text-stone-700 sm:inline" title="Sign out">
+                <svg viewBox="0 0 16 16" fill="none" width="16" height="16"><path d="M6 2H3.5A1.5 1.5 0 002 3.5v9A1.5 1.5 0 003.5 14H6M10.5 11.5L14 8l-3.5-3.5M5.5 8H14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </button>
             </div>
           </header>
+
+          {/* Content area */}
+          <section className="flex-1 space-y-4 overflow-y-auto px-7 py-7 sm:px-8">
 
           {/* Degraded banner */}
           {health?.status === "degraded" ? (
@@ -524,21 +512,6 @@ export default function WorkspaceShell() {
             </Panel>
           ) : (
             <>
-              {/* Tab bar */}
-              <div className="hidden md:block">
-                <div className="glass inline-flex gap-0.5 rounded-[14px] p-1">
-                  {tabs.map((tab) => (
-                    <button key={tab} type="button" onClick={() => setActiveTab(tab)}
-                      className={`rounded-[10px] px-3.5 py-1.5 text-sm transition duration-200 ${activeTab === tab
-                          ? "bg-amber-500 text-stone-50 shadow-[0_2px_8px_rgba(168,90,20,0.28)]"
-                          : "text-stone-500 hover:bg-[rgba(255,255,255,0.6)] hover:text-stone-700"
-                        }`}>
-                      {labelize(tab)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Module content */}
               <AnimatePresence mode="wait">
                 <motion.div key={activeTab}
@@ -878,6 +851,10 @@ export default function WorkspaceShell() {
               </AnimatePresence>
             </>
           )}
+
+          <footer className="mt-2 pb-20 text-center text-xs text-stone-400 md:pb-4">
+            Vital provides educational guidance only and does not replace licensed medical care.
+          </footer>
         </section>
       </div>
 
@@ -918,10 +895,6 @@ export default function WorkspaceShell() {
           ) : null}
         </div>
       </div>
-
-      <footer className="mt-5 pb-20 text-center text-xs text-stone-400 md:pb-0">
-        Vital provides educational guidance only and does not replace licensed medical care.
-      </footer>
     </main>
   );
 }

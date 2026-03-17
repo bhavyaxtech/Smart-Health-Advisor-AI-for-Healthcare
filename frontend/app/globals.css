@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -28,9 +30,12 @@
   --sky-mid: #89b8cc;
   --glass-bg: rgba(255, 253, 249, 0.58);
   --glass-border: rgba(255, 255, 255, 0.78);
-  --glass-shadow: 0 8px 32px rgba(20, 16, 8, 0.07), 0 2px 8px rgba(20, 16, 8, 0.04);
-  --glass-shadow-md: 0 16px 48px rgba(20, 16, 8, 0.1), 0 4px 16px rgba(20, 16, 8, 0.05);
-  --glass-shadow-lg: 0 32px 80px rgba(20, 16, 8, 0.14), 0 8px 24px rgba(20, 16, 8, 0.07);
+  --glass-shadow: 0 8px 32px rgba(20, 16, 8, 0.07),
+    0 2px 8px rgba(20, 16, 8, 0.04);
+  --glass-shadow-md: 0 16px 48px rgba(20, 16, 8, 0.1),
+    0 4px 16px rgba(20, 16, 8, 0.05);
+  --glass-shadow-lg: 0 32px 80px rgba(20, 16, 8, 0.14),
+    0 8px 24px rgba(20, 16, 8, 0.07);
 }
 
 * {
@@ -43,11 +48,11 @@ html {
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 15% 15%, rgba(233, 198, 149, 0.18), transparent 34%),
-    radial-gradient(circle at 90% 5%, rgba(137, 184, 204, 0.2), transparent 26%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background: var(--bg);
   color: var(--stone-600);
-  font-family: var(--font-body), Arial, sans-serif;
+  font-family: "DM Sans", -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -66,13 +71,27 @@ textarea {
   background: rgba(201, 112, 34, 0.18);
 }
 
-@layer base {
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 153, 144, 0.35);
+  border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 153, 144, 0.55);
+}
 
+@layer base {
   h1,
   h2,
   h3,
   h4 {
-    font-family: var(--font-display), Georgia, serif;
+    font-family: "Fraunces", Georgia, serif;
     color: var(--stone-900);
     letter-spacing: -0.025em;
   }
@@ -86,15 +105,17 @@ textarea {
   select,
   button,
   a {
-    font-family: var(--font-body), Arial, sans-serif;
+    font-family: "DM Sans", -apple-system, sans-serif;
   }
 }
 
+/* ── Glass utilities ── */
+
 .glass {
-  background: var(--glass-bg);
+  background: rgba(255, 253, 249, 0.58);
   backdrop-filter: blur(20px) saturate(170%);
   -webkit-backdrop-filter: blur(20px) saturate(170%);
-  border: 1px solid var(--glass-border);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   box-shadow: var(--glass-shadow);
 }
 
@@ -106,6 +127,8 @@ textarea {
   box-shadow: var(--glass-shadow-md);
 }
 
+/* ── Decorative utilities ── */
+
 .gradient-ring {
   position: relative;
 }
@@ -115,10 +138,12 @@ textarea {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(120deg,
-      rgba(255, 255, 255, 0.74),
-      rgba(224, 144, 64, 0.22),
-      rgba(137, 184, 204, 0.24));
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0.74),
+    rgba(224, 144, 64, 0.22),
+    rgba(137, 184, 204, 0.24)
+  );
   z-index: -1;
   pointer-events: none;
 }
@@ -134,9 +159,14 @@ textarea {
   border-radius: inherit;
   opacity: 0.2;
   pointer-events: none;
-  background-image: radial-gradient(rgba(20, 16, 8, 0.06) 0.5px, transparent 0.5px);
+  background-image: radial-gradient(
+    rgba(20, 16, 8, 0.06) 0.5px,
+    transparent 0.5px
+  );
   background-size: 2px 2px;
 }
+
+/* ── Hero italic accent ── */
 
 .hero-italic-accent {
   position: relative;
@@ -153,51 +183,61 @@ textarea {
   bottom: -0.18em;
   height: 0.18em;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(201, 112, 34, 0.48), rgba(137, 184, 204, 0.4));
+  background: linear-gradient(
+    90deg,
+    rgba(201, 112, 34, 0.48),
+    rgba(137, 184, 204, 0.4)
+  );
 }
 
-.fade-up {
-  animation: fade-up 0.7s ease both;
-}
+/* ── Keyframes ── */
 
 @keyframes fade-up {
   from {
     opacity: 0;
     transform: translateY(22px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* Add these keyframes to the END of your existing globals.css */
+.fade-up {
+  animation: fade-up 0.7s ease both;
+}
 
 @keyframes floatOrb {
-
   0%,
   100% {
     transform: translate(0, 0) scale(1);
   }
-
   33% {
     transform: translate(28px, -38px) scale(1.04);
   }
-
   66% {
     transform: translate(-18px, 22px) scale(0.97);
   }
 }
 
 @keyframes floatCard {
-
   0%,
   100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-9px);
+  }
+}
+
+@keyframes pulseDot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
   }
 }

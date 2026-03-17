@@ -8,8 +8,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["var(--font-display)", "Georgia", "serif"],
-        body: ["var(--font-body)", "Arial", "sans-serif"],
+        display: ["Fraunces", "Georgia", "serif"],
+        body: ["DM Sans", "-apple-system", "sans-serif"],
       },
       colors: {
         bg: "var(--bg)",
@@ -41,6 +41,40 @@ module.exports = {
           soft: "var(--sky-soft)",
           mid: "var(--sky-mid)",
         },
+        vital: {
+          amber: {
+            50: "#fdf8f0",
+            100: "#faecd8",
+            200: "#f5d4a8",
+            300: "#edaf60",
+            400: "#e09040",
+            500: "#c97022",
+            600: "#a85a14",
+            700: "#7e420d",
+            800: "#5a2f08",
+          },
+          stone: {
+            50: "#f9f8f6",
+            100: "#f0eeea",
+            200: "#dedad3",
+            300: "#c8c3b9",
+            400: "#a09990",
+            500: "#776e64",
+            600: "#5a5249",
+            700: "#3e3830",
+            800: "#252018",
+            900: "#141008",
+          },
+          sky: {
+            soft: "#d4e8f0",
+            mid: "#89b8cc",
+          },
+        },
+      },
+      borderRadius: {
+        pill: "100px",
+        card: "20px",
+        chip: "14px",
       },
       boxShadow: {
         glass: "var(--glass-shadow)",

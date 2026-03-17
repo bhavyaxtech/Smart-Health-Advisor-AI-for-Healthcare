@@ -25,11 +25,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${dmSans.variable} ${fraunces.variable} min-h-screen bg-bg font-body text-stone-600 antialiased`}
+        className={`${dmSans.variable} ${fraunces.variable} antialiased`}
       >
         <Script
           src="https://accounts.google.com/gsi/client"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
         {children}
       </body>
