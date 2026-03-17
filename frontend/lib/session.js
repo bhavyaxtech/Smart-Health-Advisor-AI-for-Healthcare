@@ -118,11 +118,3 @@ export function updateStoredUser(user) {
 
   safeWrite(STORAGE_KEYS.authUser, JSON.stringify(user));
 }
-
-export function getAuthorizationHeader() {
-  const session = getStoredSession();
-  if (!session?.token) return {};
-  return {
-    Authorization: `Bearer ${session.token}`,
-  };
-}

@@ -193,7 +193,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allow_origins,
-    allow_credentials=settings.cors_allow_credentials,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -261,16 +261,6 @@ def _current_user_response(user_doc: Dict[str, Any]) -> CurrentUserResponse:
         created_at=str(user_doc.get("created_at", "")),
         updated_at=str(user_doc.get("updated_at", "")),
     )
-
-
-@app.get("/")
-async def root() -> Dict[str, Any]:
-    return {
-        "message": "Smart Health Advisor AI API",
-        "google_auth_only": True,
-        "strict_credit_limit": settings.initial_credits,
-        "version": settings.app_version,
-    }
 
 
 @app.get("/api/health")

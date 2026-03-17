@@ -1,25 +1,29 @@
 # Frontend
 
-This frontend is a Create React App single-page client for Smart Health Advisor AI.
+This frontend is now a Next.js app-router project intended for Vercel deployment.
+
+## Environment
+
+Create `frontend/.env` from [frontend/.env.example](C:\Users\abhii\Desktop\Projects\Smart Health Advisor AI\frontend\.env.example).
+
+Required:
+
+- `NEXT_PUBLIC_BACKEND_URL`
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
 
 ## Commands
 
 ```bash
 npm install
-npm start
+npm run dev
 npm run build
+npm run start
 ```
 
-## Required Environment
+## Deployment Notes
 
-- `REACT_APP_BACKEND_URL`
-- `REACT_APP_GOOGLE_CLIENT_ID`
-
-## Runtime Notes
-
-- Google sign-in is required for all protected tools.
-- The client now handles three important backend states explicitly:
-  - expired session (`401`) -> clears local session and prompts sign-in
-  - degraded protected service (`503`) -> keeps the app open and shows a warning state
-  - unreachable backend (`status 0`) -> shows an offline-style error and marks the service unavailable
-- The production build is the main frontend validation path in this repo.
+- All API requests use the absolute backend base URL from `NEXT_PUBLIC_BACKEND_URL`
+- No proxy fallback is used
+- Google sign-in uses `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+- The production build does not require the backend to be reachable during build time
+- The app flow is `landing page -> login -> application workspace`

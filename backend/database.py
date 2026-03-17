@@ -34,6 +34,10 @@ class DatabaseManager:
         if self._database is not None:
             return self._database
 
+        if not settings.mongo_url.strip():
+            self._last_error = "MONGO_URL is not configured."
+            raise DatabaseUnavailableError(self._last_error)
+
         logger.info("Connecting to MongoDB database '%s'", settings.mongo_database)
 
         self._last_error = ""

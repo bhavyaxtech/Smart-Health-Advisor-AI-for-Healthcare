@@ -1,20 +1,23 @@
-const DEFAULT_API_BASE_URL = (process.env.REACT_APP_BACKEND_URL || "").trim() || "";
+const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "")
+  .trim()
+  .replace(/\/+$/, "");
 
 function buildUrl(path) {
-  if (!path.startsWith("/")) {
-    throw new Error(`API path must start with "/": ${path}`);
+  if (!path.startsWith("/api/")) {
+    throw new Error(`API path must start with "/api/": ${path}`);
   }
 
-  if (!DEFAULT_API_BASE_URL) {
-    return path;
+  if (!API_BASE) {
+    throw new Error(
+      "NEXT_PUBLIC_BACKEND_URL is required and must point to the FastAPI backend."
+    );
   }
 
-  return `${DEFAULT_API_BASE_URL}${path}`;
+  return `${API_BASE}${path}`;
 }
 
 async function parseJsonSafely(response) {
   const text = await response.text();
-
   if (!text) {
     return null;
   }
@@ -79,25 +82,17 @@ class ApiClient {
       return {};
     }
 
-    return {
-      Authorization: `Bearer ${this.token}`,
-    };
+    return { Authorization: `Bearer ${this.token}` };
   }
 
   async request(path, options = {}) {
-    const {
-      method = "GET",
-      body,
-      headers = {},
-      requiresAuth = false,
-    } = options;
+    const { method = "GET", body, headers = {}, requiresAuth = false } = options;
 
     if (requiresAuth && !this.token) {
       throw new ApiError("You need to sign in with Google first.", 401);
     }
 
     let response;
-
     try {
       response = await fetch(buildUrl(path), {
         method,
@@ -117,7 +112,6 @@ class ApiClient {
     }
 
     const payload = await parseJsonSafely(response);
-
     if (!response.ok) {
       throw new ApiError(
         getErrorMessage(payload, `Request failed with status ${response.status}`),
@@ -137,15 +131,11 @@ class ApiClient {
   }
 
   getCurrentUser() {
-    return this.request("/api/auth/me", {
-      requiresAuth: true,
-    });
+    return this.request("/api/auth/me", { requiresAuth: true });
   }
 
   getCredits() {
-    return this.request("/api/credits", {
-      requiresAuth: true,
-    });
+    return this.request("/api/credits", { requiresAuth: true });
   }
 
   analyzeSymptom(payload) {
@@ -157,9 +147,7 @@ class ApiClient {
   }
 
   getHistory() {
-    return this.request("/api/history", {
-      requiresAuth: true,
-    });
+    return this.request("/api/history", { requiresAuth: true });
   }
 
   getDashboard(userId) {
@@ -207,4 +195,5 @@ class ApiClient {
 
 const apiClient = new ApiClient();
 
+export { API_BASE };
 export default apiClient;
