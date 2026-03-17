@@ -46,7 +46,9 @@ class Settings:
 
     google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
 
-    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
+    jwt_secret_key: str = os.getenv(
+        "JWT_SECRET_KEY", "change-me-in-production"
+    )
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 10080
 

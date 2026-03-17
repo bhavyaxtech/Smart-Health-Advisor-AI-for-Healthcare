@@ -200,17 +200,17 @@ app.add_middleware(
 
 
 def user_repository(db: Optional[Any] = None) -> UserRepository:
-    db = db or get_database()
+    db = db if db is not None else get_database()
     return UserRepository(db.users, initial_credits=settings.initial_credits)
 
 
 def analysis_repository(db: Optional[Any] = None) -> AnalysisRepository:
-    db = db or get_database()
+    db = db if db is not None else get_database()
     return AnalysisRepository(db.symptom_analyses)
 
 
 async def initialize_indexes(db: Optional[Any] = None) -> None:
-    db = db or await connect_to_mongo()
+    db = db if db is not None else await connect_to_mongo()
     await user_repository(db).create_indexes()
     await analysis_repository(db).create_indexes()
 

@@ -223,7 +223,7 @@ def extract_bearer_token(authorization_header: Optional[str]) -> str:
     if not authorization_header.startswith(prefix):
         raise AuthError("Authorization header must use the Bearer scheme.")
 
-    token = authorization_header[len(prefix) :].strip()
+    token = authorization_header[len(prefix):].strip()
     if not token:
         raise AuthError("Bearer token is empty.")
 

@@ -383,15 +383,18 @@ def generate_ai_insights(
         {
             "insight_type": "Pattern Analysis",
             "title": "Pattern Recognition Insight",
-            "description": f"{symptom.title()} can be influenced by sleep, stress, hydration, and meal timing patterns.",
-            "recommendation": "Track symptom timing alongside sleep, stress, hydration, and meals for 1-2 weeks.",
+            "description": f"{symptom.title()} can be influenced by sleep, "
+            "stress, hydration, and meal timing patterns.",
+            "recommendation": "Track symptom timing alongside sleep, stress, "
+            "hydration, and meals for 1-2 weeks.",
             "evidence_level": "Moderate confidence from symptom pattern heuristics",
         },
         {
             "insight_type": "Prevention",
             "title": "Preventive Lifestyle Strategy",
             "description": "Consistent routines often reduce recurrence and make triggers easier to identify.",
-            "recommendation": "Aim for regular meals, hydration, and consistent sleep before making multiple changes at once.",
+            "recommendation": "Aim for regular meals, hydration, and "
+            "consistent sleep before making multiple changes at once.",
             "evidence_level": "Strong general lifestyle support evidence",
         },
     ]
@@ -559,7 +562,8 @@ def build_personalized_tips(
 
     return [
         f"Based on your {severity} severity, focus first on: {primary_focus}.",
-        f"Given the {duration} duration, watch for either clear improvement or any worsening trend over the next several days.",
+        f"Given the {duration} duration, watch for either clear improvement "
+        "or any worsening trend over the next several days.",
         f"Your symptom pattern may align most closely with: {lead_cause}.",
         "Track meals, hydration, sleep, and symptom timing to make follow-up assessment more useful.",
     ]

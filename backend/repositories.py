@@ -456,7 +456,8 @@ class AnalysisRepository:
             "patterns": {
                 "recurring_patterns": recurring,
                 "trigger_identification": [
-                    "Manual trigger tracking is not yet structured; use additional notes for better insight extraction.",
+                    "Manual trigger tracking is not yet structured; use "
+                    "additional notes for better insight extraction.",
                     "Severity and duration are currently the strongest pattern signals in your history.",
                 ],
                 "improvement_trends": [
@@ -465,7 +466,8 @@ class AnalysisRepository:
                 ],
                 "ai_predictions": [
                     "More consistent symptom logging will improve pattern confidence.",
-                    "Recurring symptoms with moderate or severe scores should be professionally evaluated if persistent.",
+                    "Recurring symptoms with moderate or severe scores should "
+                    "be professionally evaluated if persistent.",
                 ],
                 "personalized_insights": [
                     f"You have {len(analyses)} stored analysis record(s).",

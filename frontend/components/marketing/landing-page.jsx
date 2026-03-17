@@ -159,9 +159,13 @@ export default function LandingPage() {
           </Link>
 
           <nav className="hidden items-center gap-1 min-[920px]:flex">
-            {["Features", "How it works", "Privacy", "About"].map((item) => (
-              <a key={item} href="#" className="rounded-lg px-3 py-1.5 text-[0.855rem] text-stone-500 transition duration-200 hover:bg-white/55 hover:text-stone-800">
-                {item}
+            {[
+              { label: "Features", href: "#features" },
+              { label: "How it works", href: "#how" },
+              { label: "About", href: "#about" },
+            ].map((item) => (
+              <a key={item.label} href={item.href} className="rounded-lg px-3 py-1.5 text-[0.855rem] text-stone-500 transition duration-200 hover:bg-white/55 hover:text-stone-800">
+                {item.label}
               </a>
             ))}
           </nav>
@@ -386,7 +390,7 @@ export default function LandingPage() {
           whileInView={reducedMotion ? undefined : "visible"}
           viewport={{ once: true, amount: 0.1 }}
           variants={staggerParent}
-          className="mt-10"
+          className="mt-10" id="features"
         >
           <div className="mb-10 text-center">
             <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-[0.74rem] font-medium uppercase tracking-[0.1em] text-amber-700">
@@ -485,6 +489,64 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── About ── */}
+        <section className="mt-10" id="about">
+          <div className="mb-10 text-center">
+            <span className="inline-flex items-center rounded-full border border-[rgba(201,112,34,0.2)] bg-[rgba(201,112,34,0.09)] px-3 py-1 text-[0.74rem] font-medium uppercase tracking-[0.1em] text-amber-700">
+              About Vital
+            </span>
+            <h2 className="mt-4 font-display font-normal text-stone-900" style={{ fontSize: "clamp(1.9rem,3vw,2.75rem)", letterSpacing: "-0.022em" }}>
+              Health guidance you can trust.
+            </h2>
+            <p className="mx-auto mt-3 max-w-[520px] text-base font-light leading-[1.72] text-stone-400">
+              Vital is an AI-powered educational health workspace built to help you understand your symptoms, track trends, and make informed decisions — not replace your doctor.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              {
+                title: "Our Mission",
+                body: "We believe everyone deserves access to clear, structured health information. Vital bridges the gap between vague symptoms and actionable clarity by combining AI analysis with the latest medical research.",
+                icon: (
+                  <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
+                    <path d="M10 2v16M2 10h16" stroke="#c97022" strokeWidth="1.4" strokeLinecap="round" />
+                    <circle cx="10" cy="10" r="7.5" stroke="#c97022" strokeWidth="1.3" />
+                  </svg>
+                ),
+              },
+              {
+                title: "How It Works",
+                body: "Describe your symptoms in plain language. Vital analyses your input against medical literature from PubMed, surfaces evidence-based insights, and gives you a personalised diet and lifestyle action plan — all in seconds.",
+                icon: (
+                  <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
+                    <rect x="2.5" y="2.5" width="15" height="15" rx="2.5" stroke="#c97022" strokeWidth="1.3" />
+                    <path d="M6 10l3 3 5-5" stroke="#c97022" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ),
+              },
+              {
+                title: "Built on Trust",
+                body: "Your data stays private. We don't sell your information, and every insight is grounded in peer-reviewed research. Vital is an educational tool — always consult a healthcare professional for medical decisions.",
+                icon: (
+                  <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
+                    <path d="M10 2L3 6v5c0 4.4 3 7.5 7 9 4-1.5 7-4.6 7-9V6l-7-4z" stroke="#c97022" strokeWidth="1.3" strokeLinejoin="round" />
+                    <path d="M7.5 10l2 2 3.5-3.5" stroke="#c97022" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ),
+              },
+            ].map((item) => (
+              <div key={item.title} className="glass relative rounded-[20px] p-6">
+                <div className="absolute inset-x-0 top-0 h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.78),transparent)" }} />
+                <div className="mb-4 inline-flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-[linear-gradient(135deg,rgba(237,175,96,0.18),rgba(201,112,34,0.10))]">
+                  {item.icon}
+                </div>
+                <h3 className="font-display text-lg font-normal text-stone-800">{item.title}</h3>
+                <p className="mt-2 text-sm font-light leading-[1.7] text-stone-400">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Footer */}
         <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-[rgba(20,16,8,0.07)] pt-8">
           <Link href="/" className="flex items-center gap-2">
@@ -493,7 +555,7 @@ export default function LandingPage() {
             <span className="font-display text-base font-normal text-stone-500">Vital</span>
           </Link>
           <div className="flex gap-5">
-            {["Privacy", "Terms", "Disclaimer", "Contact"].map((item) => (
+            {["Terms", "Disclaimer", "Contact"].map((item) => (
               <a key={item} href="#" className="text-xs text-stone-400 transition hover:text-stone-700">{item}</a>
             ))}
           </div>

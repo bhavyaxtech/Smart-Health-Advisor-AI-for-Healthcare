@@ -22,7 +22,8 @@ def build_pubmed_query(
     medical_history: Optional[str] = None,
 ) -> str:
     """
-    Build a conservative PubMed query focused on symptom, nutrition, and management.
+    Build a conservative PubMed query focused on symptom, nutrition,
+    and management.
 
     The goal is to retrieve recent literature relevant to symptom-oriented,
     educational guidance without making unsupported diagnostic claims.
@@ -234,7 +235,8 @@ def format_research_digest(
         return (
             f"Live medical literature search for {symptom.title()} is currently unavailable.\n\n"
             f"Reason: {error_message}\n"
-            "You can still use the symptom analysis, but verify important decisions with a clinician because this research section is degraded."
+            "You can still use the symptom analysis, but verify important "
+            "decisions with a clinician because this research section is degraded."
         )
 
     results: List[Dict[str, Any]] = research_payload.get("results", [])

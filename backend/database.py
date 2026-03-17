@@ -21,13 +21,17 @@ class DatabaseManager:
     @property
     def client(self) -> AsyncIOMotorClient:
         if self._client is None:
-            raise DatabaseUnavailableError("Database client has not been initialized.")
+            raise DatabaseUnavailableError(
+                "Database client has not been initialized."
+            )
         return self._client
 
     @property
     def database(self) -> AsyncIOMotorDatabase:
         if self._database is None:
-            raise DatabaseUnavailableError("Database has not been initialized.")
+            raise DatabaseUnavailableError(
+                "Database has not been initialized."
+            )
         return self._database
 
     async def connect(self) -> AsyncIOMotorDatabase:
@@ -38,13 +42,17 @@ class DatabaseManager:
             self._last_error = "MONGO_URL is not configured."
             raise DatabaseUnavailableError(self._last_error)
 
-        logger.info("Connecting to MongoDB database '%s'", settings.mongo_database)
+        logger.info(
+            "Connecting to MongoDB database '%s'", settings.mongo_database
+        )
 
         self._last_error = ""
 
         candidate_client = AsyncIOMotorClient(
             settings.mongo_url,
-            serverSelectionTimeoutMS=settings.mongo_server_selection_timeout_ms,
+            serverSelectionTimeoutMS=(
+                settings.mongo_server_selection_timeout_ms
+            ),
             uuidRepresentation="standard",
         )
 
@@ -86,8 +94,12 @@ class DatabaseManager:
     async def _ensure_indexes(self) -> None:
         db = self.database
 
-        await db.users.create_index("google_sub", unique=True, name="uniq_google_sub")
-        await db.users.create_index("email", unique=True, name="uniq_user_email")
+        await db.users.create_index(
+            "google_sub", unique=True, name="uniq_google_sub"
+        )
+        await db.users.create_index(
+            "email", unique=True, name="uniq_user_email"
+        )
 
         await db.symptom_analyses.create_index(
             [("user_id", 1), ("created_at", -1)],
