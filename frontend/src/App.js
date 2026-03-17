@@ -1,668 +1,1754 @@
-import React, { useState, useEffect } from 'react';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import "./App.css";
+import apiClient from "./services/api";
+import {
+  clearAuthSession,
+  getStoredSession,
+  setAuthSession,
+  updateStoredUser,
+} from "./utils/session";
 
-function App() {
-  const [symptom, setSymptom] = useState('');
-  const [duration, setDuration] = useState('');
-  const [severity, setSeverity] = useState('');
-  const [additionalInfo, setAdditionalInfo] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
-  const [medicalHistory, setMedicalHistory] = useState('');
-  const [analysis, setAnalysis] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState('analysis');
-  const [showEnhancedForm, setShowEnhancedForm] = useState(false);
+const DEFAULT_CREDITS = 5;
+const GOOGLE_CLIENT_ID = (process.env.REACT_APP_GOOGLE_CLIENT_ID || "").trim();
 
-  const handleAnalyze = async (e) => {
-    e.preventDefault();
-    
-    if (!symptom.trim()) {
-      setError('Please enter a symptom to analyze');
+function formatDate(value) {
+  if (!value) return "—";
+
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return String(value);
+  }
+}
+
+function toLabel(value) {
+  return String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getUrgencyTone(value) {
+  const normalized = String(value || "").toLowerCase();
+
+  if (normalized.includes("high") || normalized.includes("urgent")) {
+    return "high";
+  }
+
+  if (normalized.includes("medium") || normalized.includes("prompt")) {
+    return "medium";
+  }
+
+  return "low";
+}
+
+function isAuthFailure(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.status === 401 || message.includes("token");
+}
+
+function isServiceDegradedError(error) {
+  return error?.status === 503;
+}
+
+function isNetworkFailure(error) {
+  return error?.status === 0;
+}
+
+function getGoogleCredential(clientId) {
+  return new Promise((resolve, reject) => {
+    if (!clientId) {
+      reject(
+        new Error(
+          "Google sign-in is not configured. Set REACT_APP_GOOGLE_CLIENT_ID first.",
+        ),
+      );
       return;
     }
 
-    setLoading(true);
-    setError('');
+    if (!window.google?.accounts?.id) {
+      reject(
+        new Error(
+          "Google sign-in library is not loaded yet. Please try again in a moment.",
+        ),
+      );
+      return;
+    }
+
+    let settled = false;
+
+    const finish = (callback) => (value) => {
+      if (settled) return;
+      settled = true;
+      callback(value);
+    };
+
+    const resolveOnce = finish(resolve);
+    const rejectOnce = finish(reject);
+
+    const timeoutId = window.setTimeout(() => {
+      rejectOnce(new Error("Google sign-in timed out. Please try again."));
+    }, 60000);
+
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response) => {
+        window.clearTimeout(timeoutId);
+
+        if (!response?.credential) {
+          rejectOnce(new Error("Google sign-in did not return a credential."));
+          return;
+        }
+
+        resolveOnce(response.credential);
+      },
+    });
+
+    window.google.accounts.id.prompt((notification) => {
+      if (settled) return;
+
+      const notDisplayed =
+        typeof notification?.isNotDisplayed === "function" &&
+        notification.isNotDisplayed();
+      const skipped =
+        typeof notification?.isSkippedMoment === "function" &&
+        notification.isSkippedMoment();
+      const dismissed =
+        typeof notification?.isDismissedMoment === "function" &&
+        notification.isDismissedMoment();
+
+      if (notDisplayed || skipped || dismissed) {
+        window.clearTimeout(timeoutId);
+        rejectOnce(
+          new Error(
+            "Google sign-in could not be completed from the browser prompt.",
+          ),
+        );
+      }
+    });
+  });
+}
+
+function StatCard({ label, value, helper, tone = "blue" }) {
+  return (
+    <div className={`panel stat-card stat-${tone}`}>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+      {helper ? <div className="stat-helper">{helper}</div> : null}
+    </div>
+  );
+}
+
+function SectionCard({ title, subtitle, action, children }) {
+  return (
+    <section className="panel section-card">
+      <div className="section-header">
+        <div>
+          <h2>{title}</h2>
+          {subtitle ? <p className="section-subtitle">{subtitle}</p> : null}
+        </div>
+        {action ? <div>{action}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function MessageBanner({ type = "info", children }) {
+  return <div className={`message-banner message-${type}`}>{children}</div>;
+}
+
+function TabButton({ id, activeTab, onClick, children }) {
+  const isActive = id === activeTab;
+
+  return (
+    <button
+      type="button"
+      className={`tab-button ${isActive ? "active" : ""}`}
+      onClick={() => onClick(id)}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ResultTabButton({ id, activeTab, onClick, children }) {
+  const isActive = id === activeTab;
+
+  return (
+    <button
+      type="button"
+      className={`result-tab-button ${isActive ? "active" : ""}`}
+      onClick={() => onClick(id)}
+    >
+      {children}
+    </button>
+  );
+}
+
+function App() {
+  const [authSession, setAuthSessionState] = useState(() => getStoredSession());
+  const [health, setHealth] = useState(null);
+  const [me, setMe] = useState(null);
+  const [credits, setCredits] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [patternAnalysis, setPatternAnalysis] = useState(null);
+
+  const [symptom, setSymptom] = useState("");
+  const [duration, setDuration] = useState("");
+  const [severity, setSeverity] = useState("");
+  const [additionalInfo, setAdditionalInfo] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
+  const [medicalHistory, setMedicalHistory] = useState("");
+
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisTab, setAnalysisTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("analysis");
+  const [showEnhancedForm, setShowEnhancedForm] = useState(true);
+
+  const [chatMessage, setChatMessage] = useState("");
+  const [chatResponse, setChatResponse] = useState(null);
+
+  const [voiceText, setVoiceText] = useState("");
+  const [voiceConfidence, setVoiceConfidence] = useState("0.90");
+  const [voiceResponse, setVoiceResponse] = useState(null);
+
+  const [researchQuery, setResearchQuery] = useState("");
+  const [researchResponse, setResearchResponse] = useState(null);
+
+  const [appLoading, setAppLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const [researchLoading, setResearchLoading] = useState(false);
+  const [patternLoading, setPatternLoading] = useState(false);
+
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const signedInUser = me || authSession?.user || null;
+  const isAuthenticated = Boolean(authSession?.token);
+  const creditsTotal = credits?.credits_total ?? DEFAULT_CREDITS;
+  const creditsRemaining =
+    credits?.credits_remaining ?? signedInUser?.credits_remaining ?? 0;
+  const creditsUsed =
+    credits?.credits_used ?? Math.max(creditsTotal - creditsRemaining, 0);
+  const isServiceDegraded =
+    health?.status === "degraded" ||
+    health?.status === "unavailable" ||
+    health?.database_available === false;
+  const healthStatusLabel =
+    health?.status === "healthy"
+      ? "Ready"
+      : health?.status === "degraded"
+        ? "Degraded"
+        : "Offline";
+
+  useEffect(() => {
+    apiClient.setToken(authSession?.token || null);
+  }, [authSession]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function initialize() {
+      try {
+        const healthPayload = await apiClient.getHealth();
+        if (!cancelled) {
+          setHealth(healthPayload);
+        }
+      } catch {
+        if (!cancelled) {
+          setHealth({
+            status: "unavailable",
+            database_available: false,
+            database_error: "Unable to reach the backend service.",
+            google_auth_enabled: Boolean(GOOGLE_CLIENT_ID),
+            pubmed_enabled: false,
+          });
+        }
+      }
+
+      if (authSession?.token) {
+        await refreshProtectedData(authSession.token, cancelled);
+      }
+    }
+
+    initialize();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function clearFeedback() {
+    setErrorMessage("");
+    setSuccessMessage("");
+  }
+
+  function handleLogout(message = "Signed out successfully.") {
+    clearAuthSession();
+    apiClient.clearToken();
+    setAuthSessionState(null);
+    setMe(null);
+    setCredits(null);
+    setHistory([]);
+    setDashboard(null);
+    setPatternAnalysis(null);
     setAnalysis(null);
+    setChatResponse(null);
+    setVoiceResponse(null);
+    setResearchResponse(null);
+    setChatMessage("");
+    setVoiceText("");
+    setResearchQuery("");
+    setActiveTab("analysis");
+    setAnalysisTab("overview");
+    setErrorMessage("");
+    setSuccessMessage(message || "");
+  }
+
+  function updateStoredProfile(user) {
+    updateStoredUser(user);
+    setAuthSessionState((current) =>
+      current ? { ...current, user: user || current.user } : current,
+    );
+  }
+
+  function markServiceHealth(status, message) {
+    setHealth((current) => ({
+      ...(current || {}),
+      status,
+      database_available: false,
+      database_error:
+        message || current?.database_error || "Backend service is unavailable.",
+      google_auth_enabled:
+        current?.google_auth_enabled ?? Boolean(GOOGLE_CLIENT_ID),
+      pubmed_enabled: current?.pubmed_enabled ?? false,
+    }));
+  }
+
+  function handleProtectedApiError(
+    error,
+    fallbackMessage,
+    serviceMessage = fallbackMessage,
+  ) {
+    const message = error?.message || fallbackMessage;
+
+    if (isAuthFailure(error)) {
+      handleLogout("");
+      setErrorMessage("Your session expired or could not be verified.");
+      return;
+    }
+
+    if (isServiceDegradedError(error)) {
+      markServiceHealth("degraded", message);
+      setErrorMessage(serviceMessage);
+      return;
+    }
+
+    if (isNetworkFailure(error)) {
+      markServiceHealth("unavailable", message);
+      setErrorMessage(
+        "The backend service could not be reached. Please try again shortly.",
+      );
+      return;
+    }
+
+    setErrorMessage(message);
+  }
+
+  async function refreshProtectedData(tokenOverride = null, cancelled = false) {
+    const token = tokenOverride || authSession?.token;
+    if (!token) return;
+
+    apiClient.setToken(token);
+    setAppLoading(true);
 
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || import.meta.env.REACT_APP_BACKEND_URL;
-      
-      const requestData = {
+      const [mePayload, creditsPayload, historyPayload] = await Promise.all([
+        apiClient.getCurrentUser(),
+        apiClient.getCredits(),
+        apiClient.getHistory(),
+      ]);
+
+      if (cancelled) return;
+
+      setMe(mePayload);
+      updateStoredProfile(mePayload);
+      setCredits(creditsPayload);
+      setHistory(historyPayload || []);
+      setHealth((current) =>
+        current
+          ? {
+              ...current,
+              status: "healthy",
+              database_available: true,
+              database_error: null,
+            }
+          : current,
+      );
+
+      if (mePayload?.user_id) {
+        const dashboardPayload = await apiClient.getDashboard(
+          mePayload.user_id,
+        );
+        if (!cancelled) {
+          setDashboard(dashboardPayload);
+        }
+      } else if (!cancelled) {
+        setDashboard(null);
+      }
+    } catch (error) {
+      if (cancelled) return;
+      handleProtectedApiError(
+        error,
+        "Failed to refresh your account data.",
+        "Protected account data is temporarily unavailable. Please try again shortly.",
+      );
+    } finally {
+      if (!cancelled) {
+        setAppLoading(false);
+      }
+    }
+  }
+
+  async function handleGoogleLogin() {
+    clearFeedback();
+    setAuthLoading(true);
+
+    try {
+      const idToken = await getGoogleCredential(GOOGLE_CLIENT_ID);
+      const authPayload = await apiClient.authenticateWithGoogle(idToken);
+      const session = setAuthSession(authPayload);
+
+      apiClient.setToken(session.token);
+      setAuthSessionState(session);
+      setSuccessMessage("Signed in successfully with Google.");
+
+      await refreshProtectedData(session.token);
+    } catch (error) {
+      if (isServiceDegradedError(error)) {
+        markServiceHealth("degraded", error?.message);
+      } else if (isNetworkFailure(error)) {
+        markServiceHealth("unavailable", error?.message);
+      }
+      setErrorMessage(error?.message || "Google sign-in failed.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function resetAnalysisForm() {
+    setSymptom("");
+    setDuration("");
+    setSeverity("");
+    setAdditionalInfo("");
+    setAge("");
+    setGender("");
+    setMedicalHistory("");
+    setAnalysis(null);
+    setAnalysisTab("overview");
+    clearFeedback();
+  }
+
+  async function handleAnalyze(event) {
+    event.preventDefault();
+    clearFeedback();
+
+    if (!isAuthenticated) {
+      setErrorMessage("Sign in with Google before requesting an analysis.");
+      return;
+    }
+
+    if (!symptom.trim()) {
+      setErrorMessage("Please enter a symptom to analyze.");
+      return;
+    }
+
+    if (creditsRemaining <= 0) {
+      setErrorMessage(
+        `This account has already used all ${creditsTotal} available analysis credits.`,
+      );
+      return;
+    }
+
+    setAnalysisLoading(true);
+
+    try {
+      const payload = {
         symptom: symptom.trim(),
         duration: duration.trim(),
         severity: severity.trim(),
-        additional_info: additionalInfo.trim()
+        additional_info: additionalInfo.trim(),
+        gender: gender.trim(),
+        medical_history: medicalHistory.trim(),
       };
 
-      // Add optional enhanced fields if provided
-      if (age) requestData.age = parseInt(age);
-      if (gender) requestData.gender = gender;
-      if (medicalHistory) requestData.medical_history = medicalHistory.trim();
-      
-      const response = await fetch(`${backendUrl}/api/analyze-symptom`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (age) {
+        payload.age = Number(age);
       }
 
-      const data = await response.json();
-      setAnalysis(data);
-      setActiveTab('analysis');
-    } catch (err) {
-      console.error('Error analyzing symptom:', err);
-      setError('Unable to analyze symptom. Please try again later.');
+      const response = await apiClient.analyzeSymptom(payload);
+      setAnalysis(response);
+      setAnalysisTab("overview");
+      setActiveTab("analysis");
+      setSuccessMessage("Symptom analysis completed. One credit was used.");
+      await refreshProtectedData();
+    } catch (error) {
+      handleProtectedApiError(
+        error,
+        "Failed to analyze the symptom.",
+        "Symptom analysis is temporarily unavailable while the backend is degraded.",
+      );
     } finally {
-      setLoading(false);
+      setAnalysisLoading(false);
     }
-  };
+  }
 
-  const handleReset = () => {
-    setSymptom('');
-    setDuration('');
-    setSeverity('');
-    setAdditionalInfo('');
-    setAge('');
-    setGender('');
-    setMedicalHistory('');
-    setAnalysis(null);
-    setError('');
-    setActiveTab('analysis');
-  };
+  async function handleChatSubmit(event) {
+    event.preventDefault();
+    clearFeedback();
 
-  const AIInsightCard = ({ insight }) => (
-    <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300">
-      <div className="flex items-start space-x-3">
-        <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
+    if (!isAuthenticated) {
+      setErrorMessage("Sign in with Google before using the assistant.");
+      return;
+    }
+
+    if (!chatMessage.trim()) {
+      setErrorMessage("Enter a question for the AI assistant.");
+      return;
+    }
+
+    setChatLoading(true);
+
+    try {
+      const response = await apiClient.sendChatMessage(chatMessage.trim());
+      setChatResponse(response);
+    } catch (error) {
+      handleProtectedApiError(
+        error,
+        "Failed to get a chat response.",
+        "The assistant is temporarily unavailable while protected services recover.",
+      );
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function handleVoiceSubmit(event) {
+    event.preventDefault();
+    clearFeedback();
+
+    if (!isAuthenticated) {
+      setErrorMessage("Sign in with Google before using voice tools.");
+      return;
+    }
+
+    if (!voiceText.trim()) {
+      setErrorMessage("Enter a transcript before running voice analysis.");
+      return;
+    }
+
+    setVoiceLoading(true);
+
+    try {
+      const response = await apiClient.analyzeVoiceInput({
+        audio_text: voiceText.trim(),
+        confidence: Number(voiceConfidence || 0.9),
+        language: "en",
+      });
+      setVoiceResponse(response);
+    } catch (error) {
+      handleProtectedApiError(
+        error,
+        "Failed to process the voice transcript.",
+        "Voice tools are temporarily unavailable while protected services recover.",
+      );
+    } finally {
+      setVoiceLoading(false);
+    }
+  }
+
+  async function handleResearchSubmit(event) {
+    event.preventDefault();
+    clearFeedback();
+
+    if (!isAuthenticated) {
+      setErrorMessage("Sign in with Google before running literature search.");
+      return;
+    }
+
+    if (!researchQuery.trim()) {
+      setErrorMessage("Enter a search topic for PubMed research.");
+      return;
+    }
+
+    setResearchLoading(true);
+
+    try {
+      const response = await apiClient.runRealtimeSearch(researchQuery.trim());
+      setResearchResponse(response);
+      setSuccessMessage("PubMed search completed successfully.");
+    } catch (error) {
+      handleProtectedApiError(
+        error,
+        "Failed to run the literature search.",
+        "Research search is temporarily unavailable while protected services recover.",
+      );
+    } finally {
+      setResearchLoading(false);
+    }
+  }
+
+  async function handlePatternAnalysis() {
+    clearFeedback();
+
+    if (!isAuthenticated) {
+      setErrorMessage(
+        "Sign in with Google before requesting pattern analysis.",
+      );
+      return;
+    }
+
+    setPatternLoading(true);
+
+    try {
+      const response = await apiClient.runPatternAnalysis("month");
+      setPatternAnalysis(response);
+    } catch (error) {
+      handleProtectedApiError(
+        error,
+        "Failed to generate pattern analysis.",
+        "Pattern analysis is temporarily unavailable while protected services recover.",
+      );
+    } finally {
+      setPatternLoading(false);
+    }
+  }
+
+  function renderAuthRequired(message) {
+    return (
+      <SectionCard
+        title="Google sign-in required"
+        subtitle="This product only supports Google-authenticated usage."
+      >
+        <p className="section-subtitle">{message}</p>
+        <div className="button-row">
+          <button
+            type="button"
+            className="btn btn-google"
+            onClick={handleGoogleLogin}
+            disabled={authLoading}
+          >
+            {authLoading ? "Connecting to Google..." : "Continue with Google"}
+          </button>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
-            <h4 className="font-semibold text-purple-800">{insight.title}</h4>
-            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-              {insight.insight_type}
-            </span>
-          </div>
-          <p className="text-gray-700 mb-3">{insight.description}</p>
-          <div className="bg-white rounded-lg p-3 border-l-4 border-purple-400">
-            <p className="text-sm font-medium text-purple-800">💡 AI Recommendation:</p>
-            <p className="text-sm text-gray-600 mt-1">{insight.recommendation}</p>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">Evidence Level: {insight.evidence_level}</p>
-        </div>
-      </div>
-    </div>
-  );
-
-  const RiskAssessmentCard = ({ riskData }) => (
-    <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-6">
-      <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 018 0z" />
-        </svg>
-        AI Risk Assessment
-      </h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(riskData).map(([key, value], index) => (
-          <div key={index} className="bg-white rounded-lg p-3">
-            <p className="text-sm font-medium text-gray-600 capitalize">
-              {key.replace('_', ' ')}
-            </p>
-            <p className="text-sm text-gray-800 mt-1">{value}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+        {!GOOGLE_CLIENT_ID ? (
+          <MessageBanner type="warning">
+            Missing{" "}
+            <span className="code-like">REACT_APP_GOOGLE_CLIENT_ID</span> in the
+            frontend environment.
+          </MessageBanner>
+        ) : null}
+      </SectionCard>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      {/* Enhanced Header with AI branding */}
-      <header className="bg-white shadow-lg border-b border-blue-100 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-green-600/5"></div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-6">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-green-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-                  AI Health Assistant
-                </h1>
-                <p className="text-xl text-gray-600 mt-1">
-                  🤖 Enhanced with AI • Evidence-based dietary guidance • Real-time medical research
-                </p>
-                <div className="flex items-center space-x-4 mt-2">
-                  <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full">AI-Powered</span>
-                  <span className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-full">Evidence-Based</span>
-                  <span className="text-sm bg-purple-100 text-purple-800 px-3 py-1 rounded-full">Personalized</span>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="app-header-inner">
+          <div className="brand-wrap">
+            <div className="brand-badge">AI</div>
+            <div className="brand-copy">
+              <h1>Smart Health Advisor AI</h1>
+              <p>
+                Google-authenticated symptom guidance, history, dashboard, and
+                PubMed research
+              </p>
+            </div>
+          </div>
+
+          <div className="header-actions">
+            {signedInUser ? (
+              <div className="user-chip">
+                {signedInUser.picture ? (
+                  <img
+                    src={signedInUser.picture}
+                    alt={signedInUser.name || "User"}
+                  />
+                ) : (
+                  <div className="avatar-placeholder">
+                    {String(signedInUser.name || "U")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                )}
+                <div className="user-chip-meta">
+                  <span className="user-chip-name">
+                    {signedInUser.name || "Google user"}
+                  </span>
+                  <span className="user-chip-email">
+                    {signedInUser.email || "Authenticated account"}
+                  </span>
                 </div>
               </div>
-            </div>
-            <div className="hidden lg:block">
-              <img 
-                src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwyfHxkb2N0b3J8ZW58MHx8fHwxNzQ4OTcxNTk0fDA&ixlib=rb-4.1.0&q=85"
-                alt="AI Health Technology"
-                className="w-32 h-32 rounded-2xl object-cover shadow-lg"
-              />
-            </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-google"
+                onClick={handleGoogleLogin}
+                disabled={authLoading}
+              >
+                {authLoading
+                  ? "Connecting to Google..."
+                  : "Continue with Google"}
+              </button>
+            )}
+
+            {signedInUser ? (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => handleLogout()}
+              >
+                Sign out
+              </button>
+            ) : null}
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Enhanced Input Section */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 mb-8 overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-green-500 p-1">
-            <div className="bg-white rounded-xl p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <svg className="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                AI Symptom Analysis
-                <button
-                  onClick={() => setShowEnhancedForm(!showEnhancedForm)}
-                  className="ml-auto text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors"
-                >
-                  {showEnhancedForm ? 'Basic Form' : 'Enhanced AI Form'}
-                </button>
+      <main className="main-layout">
+        <section className="hero-panel">
+          <div className="hero-grid">
+            <div className="hero-copy">
+              <h2>
+                From symptom entry to personalized educational guidance in one
+                secured workflow
               </h2>
-              
-              <form onSubmit={handleAnalyze} className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="lg:col-span-2">
-                    <label htmlFor="symptom" className="block text-sm font-medium text-gray-700 mb-2">
-                      Primary Symptom * <span className="text-blue-600">(AI will analyze for patterns)</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="symptom"
-                      value={symptom}
-                      onChange={(e) => setSymptom(e.target.value)}
-                      placeholder="e.g., headache, nausea, fatigue, anxiety, stomach pain..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-2">
-                      Duration <span className="text-blue-600">(affects AI risk assessment)</span>
-                    </label>
-                    <select
-                      id="duration"
-                      value={duration}
-                      onChange={(e) => setDuration(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="">Select duration</option>
-                      <option value="less than 1 hour">Less than 1 hour</option>
-                      <option value="1-6 hours">1-6 hours</option>
-                      <option value="6-24 hours">6-24 hours</option>
-                      <option value="1-3 days">1-3 days</option>
-                      <option value="3-7 days">3-7 days</option>
-                      <option value="1-2 weeks">1-2 weeks</option>
-                      <option value="more than 2 weeks">More than 2 weeks</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="severity" className="block text-sm font-medium text-gray-700 mb-2">
-                      Severity Level <span className="text-blue-600">(AI confidence factor)</span>
-                    </label>
-                    <select
-                      id="severity"
-                      value={severity}
-                      onChange={(e) => setSeverity(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    >
-                      <option value="">Select severity</option>
-                      <option value="mild">Mild (1-3)</option>
-                      <option value="moderate">Moderate (4-6)</option>
-                      <option value="severe">Severe (7-8)</option>
-                      <option value="very severe">Very Severe (9-10)</option>
-                    </select>
-                  </div>
-
-                  {showEnhancedForm && (
-                    <>
-                      <div>
-                        <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-                          Age <span className="text-purple-600">(AI personalization)</span>
-                        </label>
-                        <input
-                          type="number"
-                          id="age"
-                          value={age}
-                          onChange={(e) => setAge(e.target.value)}
-                          placeholder="e.g., 30"
-                          min="1"
-                          max="120"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                        />
-                      </div>
-
-                      <div>
-                        <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
-                          Gender <span className="text-purple-600">(AI customization)</span>
-                        </label>
-                        <select
-                          id="gender"
-                          value={gender}
-                          onChange={(e) => setGender(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                        >
-                          <option value="">Select gender</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                          <option value="other">Other</option>
-                          <option value="prefer not to say">Prefer not to say</option>
-                        </select>
-                      </div>
-
-                      <div className="lg:col-span-2">
-                        <label htmlFor="medicalHistory" className="block text-sm font-medium text-gray-700 mb-2">
-                          Relevant Medical History <span className="text-purple-600">(AI context enhancement)</span>
-                        </label>
-                        <textarea
-                          id="medicalHistory"
-                          value={medicalHistory}
-                          onChange={(e) => setMedicalHistory(e.target.value)}
-                          placeholder="Any relevant conditions, medications, or medical history..."
-                          rows={2}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div className="lg:col-span-2">
-                    <label htmlFor="additionalInfo" className="block text-sm font-medium text-gray-700 mb-2">
-                      Additional Information <span className="text-blue-600">(helps AI analysis)</span>
-                    </label>
-                    <textarea
-                      id="additionalInfo"
-                      value={additionalInfo}
-                      onChange={(e) => setAdditionalInfo(e.target.value)}
-                      placeholder="Any additional details, triggers, or associated symptoms..."
-                      rows={3}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
-                    />
-                  </div>
+              <p>
+                The system combines Google-only authentication, a strict
+                lifetime credit model, structured health heuristics,
+                PubMed-backed research, and persistent symptom history tracking
+                for each account.
+              </p>
+              <div className="hero-pills">
+                <div className="hero-pill">Google auth only</div>
+                <div className="hero-pill">
+                  {creditsTotal} total analysis credits
                 </div>
+                <div className="hero-pill">PubMed literature search</div>
+                <div className="hero-pill">History and dashboard insights</div>
+              </div>
+            </div>
 
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                    <p className="text-red-800 font-medium">{error}</p>
-                  </div>
-                )}
+            <div className="credit-summary-card">
+              <div>
+                <h3>Account status</h3>
+                <p>
+                  {isAuthenticated
+                    ? "You are signed in and can access protected tools from your personal workspace."
+                    : "Sign in with Google to unlock analysis, history, dashboard, chat, voice tools, and research search."}
+                </p>
+              </div>
+              <div className="credit-metrics">
+                <div className="credit-metric">
+                  <span className="credit-metric-label">Auth</span>
+                  <span className="credit-metric-value">
+                    {isAuthenticated ? "On" : "Off"}
+                  </span>
+                </div>
+                <div className="credit-metric">
+                  <span className="credit-metric-label">Credits</span>
+                  <span className="credit-metric-value">
+                    {creditsRemaining}
+                  </span>
+                </div>
+                <div className="credit-metric">
+                  <span className="credit-metric-label">Health API</span>
+                  <span className="credit-metric-value">
+                    {healthStatusLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-                <div className="flex space-x-4">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-green-500 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-600 hover:to-green-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        🤖 AI Analyzing Symptoms...
-                      </span>
-                    ) : (
-                      '🚀 Get AI Health Analysis'
-                    )}
-                  </button>
-                  
+        {isServiceDegraded ? (
+          <MessageBanner type="warning">
+            {health?.database_error ||
+              "Protected backend features are temporarily degraded. Retry after the service reconnects."}
+          </MessageBanner>
+        ) : null}
+        {errorMessage ? (
+          <MessageBanner type="error">{errorMessage}</MessageBanner>
+        ) : null}
+        {successMessage ? (
+          <MessageBanner type="success">{successMessage}</MessageBanner>
+        ) : null}
+
+        <div className="stats-grid">
+          <StatCard
+            label="Authentication"
+            value={isAuthenticated ? "Active" : "Required"}
+            helper={
+              isAuthenticated
+                ? "Protected APIs are available."
+                : "Google sign-in is required for all protected features."
+            }
+            tone={isAuthenticated ? "green" : "amber"}
+          />
+          <StatCard
+            label="Credits Remaining"
+            value={creditsRemaining}
+            helper={`Used ${creditsUsed} of ${creditsTotal} total credits`}
+            tone={creditsRemaining > 0 ? "blue" : "amber"}
+          />
+          <StatCard
+            label="Stored Analyses"
+            value={history.length}
+            helper="Persistent per Google account"
+            tone="purple"
+          />
+          <StatCard
+            label="Health Score"
+            value={dashboard?.health_score ?? "—"}
+            helper={
+              health?.pubmed_enabled
+                ? "Live research integration enabled"
+                : "Research integration unavailable"
+            }
+            tone="green"
+          />
+        </div>
+
+        <div className="dashboard-grid">
+          <aside className="sidebar">
+            <div className="sidebar-card">
+              <h3>Workspace</h3>
+              <p>
+                Use the tabs below to move between symptom analysis, dashboard
+                insights, history, and supporting AI tools.
+              </p>
+              <div className="nav-list">
+                <TabButton
+                  id="analysis"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                >
+                  Symptom Analysis
+                </TabButton>
+                <TabButton
+                  id="dashboard"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                >
+                  Dashboard
+                </TabButton>
+                <TabButton
+                  id="history"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                >
+                  History
+                </TabButton>
+                <TabButton
+                  id="assistant"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                >
+                  AI Assistant
+                </TabButton>
+                <TabButton
+                  id="voice"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                >
+                  Voice Tools
+                </TabButton>
+                <TabButton
+                  id="research"
+                  activeTab={activeTab}
+                  onClick={setActiveTab}
+                >
+                  Research
+                </TabButton>
+              </div>
+            </div>
+
+            <div className="sidebar-card">
+              <h3>Product rules</h3>
+              <p>
+                Each completed symptom analysis consumes exactly one credit.
+                Credits are enforced on the backend and tied to your
+                authenticated account.
+              </p>
+            </div>
+
+            <div className="sidebar-card">
+              <h3>Service snapshot</h3>
+              <p>
+                Status: <strong>{health?.status || "loading"}</strong>
+              </p>
+              <p>
+                Database:{" "}
+                <strong>
+                  {health?.database_available === false
+                    ? "degraded"
+                    : "available"}
+                </strong>
+              </p>
+              <p>
+                PubMed:{" "}
+                <strong>
+                  {health?.pubmed_enabled ? "enabled" : "unavailable"}
+                </strong>
+              </p>
+              <p>
+                Google auth configured:{" "}
+                <strong>{health?.google_auth_enabled ? "yes" : "no"}</strong>
+              </p>
+            </div>
+          </aside>
+
+          <div className="content-area">
+            {activeTab === "analysis" ? (
+              <SectionCard
+                title="Symptom analysis"
+                subtitle="Educational symptom review, possible causes, diet guidance, and risk signals."
+                action={
                   <button
                     type="button"
-                    onClick={handleReset}
-                    className="px-6 py-4 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-gray-200 transition-all duration-200"
+                    className="toggle-inline"
+                    onClick={() => setShowEnhancedForm((value) => !value)}
                   >
-                    Reset
+                    {showEnhancedForm
+                      ? "Use simpler form"
+                      : "Use enhanced form"}
                   </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Results Section with Tabs */}
-        {analysis && (
-          <div className="space-y-8">
-            {/* Tab Navigation */}
-            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-              <div className="border-b border-gray-200">
-                <nav className="flex space-x-8 px-8">
-                  {[
-                    { key: 'analysis', label: '🤖 AI Analysis', icon: '🧠' },
-                    { key: 'diet', label: '🥗 Diet Plan', icon: '🍎' },
-                    { key: 'causes', label: '🔍 Possible Causes', icon: '⚕️' },
-                    { key: 'insights', label: '💡 AI Insights', icon: '✨' }
-                  ].map((tab) => (
-                    <button
-                      key={tab.key}
-                      onClick={() => setActiveTab(tab.key)}
-                      className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                        activeTab === tab.key
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </nav>
-              </div>
-
-              <div className="p-8">
-                {activeTab === 'analysis' && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-                          <svg className="w-6 h-6 text-blue-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
-                          AI Symptom Analysis
-                        </h3>
-                        <div className="prose prose-blue max-w-none">
-                          <p className="text-gray-700 leading-relaxed whitespace-pre-line">{analysis.symptom_analysis}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <img 
-                          src="https://images.unsplash.com/photo-1651008376811-b90baee60c1f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Nzd8MHwxfHNlYXJjaHwxfHxkb2N0b3J8ZW58MHx8fHwxNzQ4OTcxNTk0fDA&ixlib=rb-4.1.0&q=85"
-                          alt="Healthcare Professional"
-                          className="w-full h-64 object-cover rounded-xl shadow-lg"
-                        />
-                      </div>
-                    </div>
-
-                    {/* AI Web Research Section */}
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
-                      <h4 className="text-lg font-semibold text-indigo-800 mb-4 flex items-center">
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 018 0z" />
-                        </svg>
-                        🌐 AI Web Research Results
-                      </h4>
-                      <div className="prose prose-indigo max-w-none">
-                        <p className="text-gray-700 leading-relaxed whitespace-pre-line">{analysis.ai_web_research}</p>
-                      </div>
-                    </div>
-
-                    {/* Risk Assessment */}
-                    <RiskAssessmentCard riskData={analysis.risk_assessment} />
-
-                    {/* Personalized Tips */}
-                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
-                      <h4 className="text-lg font-semibold text-yellow-800 mb-4 flex items-center">
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        🎯 Personalized AI Tips
-                      </h4>
-                      <div className="space-y-2">
-                        {analysis.personalized_tips.map((tip, index) => (
-                          <div key={index} className="flex items-start p-3 bg-white rounded-lg">
-                            <span className="text-yellow-600 mr-3">•</span>
-                            <span className="text-gray-700">{tip}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'diet' && (
-                  <div className="space-y-6">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <img 
-                        src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwzfHxudXRyaXRpb258ZW58MHx8fHwxNzQ4OTcxNjAxfDA&ixlib=rb-4.1.0&q=85"
-                        alt="Healthy Nutrition"
-                        className="w-20 h-20 object-cover rounded-xl shadow-lg"
+                }
+              >
+                <form onSubmit={handleAnalyze}>
+                  <div className="form-grid">
+                    <div className="field-group form-grid-full">
+                      <label htmlFor="symptom">Primary symptom</label>
+                      <input
+                        id="symptom"
+                        className="input"
+                        value={symptom}
+                        onChange={(event) => setSymptom(event.target.value)}
+                        placeholder="e.g. headache, fatigue, nausea"
                       />
-                      <h3 className="text-2xl font-bold text-gray-900 flex items-center">
-                        <svg className="w-6 h-6 text-green-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16l3-1m-3 1l-3-1" />
-                        </svg>
-                        AI-Enhanced Dietary Recommendations
-                      </h3>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <div>
-                        <h4 className="text-lg font-semibold text-green-700 mb-4 flex items-center">
-                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Foods to Consume
-                        </h4>
-                        <ul className="space-y-2">
-                          {analysis.diet_plan.foods_to_consume.map((food, index) => (
-                            <li key={index} className="flex items-start">
-                              <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                              <span className="text-gray-700">{food}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="text-lg font-semibold text-red-700 mb-4 flex items-center">
-                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Foods to Avoid
-                        </h4>
-                        <ul className="space-y-2">
-                          {analysis.diet_plan.foods_to_avoid.map((food, index) => (
-                            <li key={index} className="flex items-start">
-                              <span className="w-2 h-2 bg-red-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                              <span className="text-gray-700">{food}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <div>
-                        <h4 className="text-lg font-semibold text-blue-700 mb-4">Nutritional Focus</h4>
-                        <ul className="space-y-2">
-                          {analysis.diet_plan.nutritional_focus.map((focus, index) => (
-                            <li key={index} className="flex items-start">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                              <span className="text-gray-700">{focus}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div>
-                        <h4 className="text-lg font-semibold text-purple-700 mb-4">AI Supplement Recommendations</h4>
-                        <ul className="space-y-2">
-                          {analysis.diet_plan.supplements.map((supplement, index) => (
-                            <li key={index} className="flex items-start">
-                              <span className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                              <span className="text-gray-700">{supplement}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                    <div className="field-group">
+                      <label htmlFor="duration">Duration</label>
+                      <select
+                        id="duration"
+                        className="select"
+                        value={duration}
+                        onChange={(event) => setDuration(event.target.value)}
+                      >
+                        <option value="">Select duration</option>
+                        <option value="less than 1 hour">
+                          Less than 1 hour
+                        </option>
+                        <option value="1-6 hours">1-6 hours</option>
+                        <option value="6-24 hours">6-24 hours</option>
+                        <option value="1-3 days">1-3 days</option>
+                        <option value="3-7 days">3-7 days</option>
+                        <option value="1-2 weeks">1-2 weeks</option>
+                        <option value="more than 2 weeks">
+                          More than 2 weeks
+                        </option>
+                      </select>
                     </div>
 
-                    <div>
-                      <h4 className="text-lg font-semibold text-orange-700 mb-4">Meal Suggestions</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {analysis.diet_plan.meal_suggestions.map((meal, index) => (
-                          <div key={index} className="bg-orange-50 rounded-xl p-4 border border-orange-200">
-                            <span className="text-gray-700">{meal}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="field-group">
+                      <label htmlFor="severity">Severity</label>
+                      <select
+                        id="severity"
+                        className="select"
+                        value={severity}
+                        onChange={(event) => setSeverity(event.target.value)}
+                      >
+                        <option value="">Select severity</option>
+                        <option value="mild">Mild</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="severe">Severe</option>
+                        <option value="very severe">Very severe</option>
+                      </select>
+                    </div>
+
+                    {showEnhancedForm ? (
+                      <>
+                        <div className="field-group">
+                          <label htmlFor="age">Age</label>
+                          <input
+                            id="age"
+                            type="number"
+                            min="1"
+                            max="120"
+                            className="input"
+                            value={age}
+                            onChange={(event) => setAge(event.target.value)}
+                            placeholder="e.g. 34"
+                          />
+                        </div>
+
+                        <div className="field-group">
+                          <label htmlFor="gender">Gender</label>
+                          <select
+                            id="gender"
+                            className="select"
+                            value={gender}
+                            onChange={(event) => setGender(event.target.value)}
+                          >
+                            <option value="">Select gender</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                            <option value="prefer not to say">
+                              Prefer not to say
+                            </option>
+                          </select>
+                        </div>
+
+                        <div className="field-group form-grid-full">
+                          <label htmlFor="medicalHistory">
+                            Medical history
+                          </label>
+                          <textarea
+                            id="medicalHistory"
+                            className="textarea"
+                            rows={3}
+                            value={medicalHistory}
+                            onChange={(event) =>
+                              setMedicalHistory(event.target.value)
+                            }
+                            placeholder="Relevant conditions, medications, or prior history"
+                          />
+                        </div>
+                      </>
+                    ) : null}
+
+                    <div className="field-group form-grid-full">
+                      <label htmlFor="additionalInfo">Additional context</label>
+                      <textarea
+                        id="additionalInfo"
+                        className="textarea"
+                        rows={4}
+                        value={additionalInfo}
+                        onChange={(event) =>
+                          setAdditionalInfo(event.target.value)
+                        }
+                        placeholder="Triggers, associated symptoms, notes, or recent changes"
+                      />
                     </div>
                   </div>
-                )}
 
-                {activeTab === 'causes' && (
-                  <div className="space-y-6">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                      <svg className="w-6 h-6 text-orange-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 018 0z" />
-                      </svg>
-                      AI-Enhanced Possible Causes
-                    </h3>
-                    
-                    <div className="space-y-4">
-                      {analysis.possible_causes.map((cause, index) => (
-                        <div key={index} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow duration-200">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-lg font-semibold text-gray-900">{cause.condition}</h4>
-                            <div className="flex items-center space-x-2">
-                              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                cause.urgency_level === 'High' ? 'bg-red-100 text-red-800' :
-                                cause.urgency_level === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {cause.urgency_level} Urgency
-                              </span>
+                  {!isAuthenticated ? (
+                    <MessageBanner type="warning">
+                      Sign in with Google before submitting an analysis request.
+                    </MessageBanner>
+                  ) : null}
+
+                  {isAuthenticated && creditsRemaining <= 0 ? (
+                    <MessageBanner type="error">
+                      This account has no remaining analysis credits.
+                    </MessageBanner>
+                  ) : null}
+
+                  {isAuthenticated && isServiceDegraded ? (
+                    <MessageBanner type="warning">
+                      Analysis, history refresh, and credit updates are paused
+                      until the backend database reconnects.
+                    </MessageBanner>
+                  ) : null}
+
+                  <div className="button-row">
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={
+                        analysisLoading ||
+                        !isAuthenticated ||
+                        creditsRemaining <= 0 ||
+                        isServiceDegraded
+                      }
+                    >
+                      {analysisLoading
+                        ? "Analyzing symptom..."
+                        : `Run analysis (${creditsRemaining} credits left)`}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={resetAnalysisForm}
+                      disabled={analysisLoading}
+                    >
+                      Reset form
+                    </button>
+
+                    {isAuthenticated ? (
+                      <button
+                        type="button"
+                        className="btn btn-soft"
+                        onClick={() => refreshProtectedData()}
+                        disabled={appLoading}
+                      >
+                        Refresh account data
+                      </button>
+                    ) : null}
+                  </div>
+                </form>
+
+                {analysis ? (
+                  <div className="results-shell">
+                    <div className="result-tabs">
+                      <ResultTabButton
+                        id="overview"
+                        activeTab={analysisTab}
+                        onClick={setAnalysisTab}
+                      >
+                        Overview
+                      </ResultTabButton>
+                      <ResultTabButton
+                        id="diet"
+                        activeTab={analysisTab}
+                        onClick={setAnalysisTab}
+                      >
+                        Diet Plan
+                      </ResultTabButton>
+                      <ResultTabButton
+                        id="causes"
+                        activeTab={analysisTab}
+                        onClick={setAnalysisTab}
+                      >
+                        Possible Causes
+                      </ResultTabButton>
+                      <ResultTabButton
+                        id="insights"
+                        activeTab={analysisTab}
+                        onClick={setAnalysisTab}
+                      >
+                        AI Insights
+                      </ResultTabButton>
+                    </div>
+
+                    {analysisTab === "overview" ? (
+                      <div className="analysis-layout">
+                        <div className="panel-stack">
+                          <div className="callout-card callout-blue">
+                            <h3>Analysis summary</h3>
+                            <p className="content-prose">
+                              {analysis.symptom_analysis}
+                            </p>
+                          </div>
+
+                          <div className="callout-card callout-purple">
+                            <h3>PubMed-backed literature notes</h3>
+                            <p className="content-prose">
+                              {analysis.ai_web_research}
+                            </p>
+                          </div>
+
+                          <div className="callout-card callout-green">
+                            <h3>Risk assessment</h3>
+                            <div className="cause-grid">
+                              {Object.entries(
+                                analysis.risk_assessment || {},
+                              ).map(([key, value]) => (
+                                <div key={key} className="cause-card">
+                                  <h4>{toLabel(key)}</h4>
+                                  <p>{String(value)}</p>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                            <p className="text-blue-600 font-medium">Probability: {cause.probability}</p>
-                            <p className="text-purple-600 font-medium">AI Confidence: {cause.ai_confidence}</p>
-                          </div>
-                          <p className="text-gray-700">{cause.description}</p>
                         </div>
-                      ))}
-                    </div>
 
-                    {/* Lifestyle Suggestions */}
-                    <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
-                      <h4 className="text-lg font-semibold text-indigo-800 mb-4 flex items-center">
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        AI Lifestyle Recommendations
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {analysis.lifestyle_suggestions.map((suggestion, index) => (
-                          <div key={index} className="flex items-start p-3 bg-white rounded-lg">
-                            <span className="text-indigo-600 mr-3">•</span>
-                            <span className="text-gray-700">{suggestion}</span>
+                        <div className="panel-stack">
+                          <div className="callout-card callout-amber">
+                            <h3>Personalized tips</h3>
+                            <ul className="clean-list">
+                              {(analysis.personalized_tips || []).map((tip) => (
+                                <li key={tip}>{tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="callout-card callout-red">
+                            <h3>Red flags</h3>
+                            <ul className="clean-list">
+                              {(analysis.red_flags || []).map((flag) => (
+                                <li key={flag}>{flag}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="callout-card callout-purple">
+                            <h3>Medical disclaimer</h3>
+                            <p className="content-prose">
+                              {analysis.medical_disclaimer}
+                            </p>
+                            <p className="section-subtitle">
+                              Generated at{" "}
+                              {formatDate(analysis.search_timestamp)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {analysisTab === "diet" ? (
+                      <div className="two-column-lists">
+                        <div className="list-card">
+                          <h4>Foods to consume</h4>
+                          <ul className="clean-list">
+                            {(analysis.diet_plan?.foods_to_consume || []).map(
+                              (item) => (
+                                <li key={item}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+
+                        <div className="list-card">
+                          <h4>Foods to avoid</h4>
+                          <ul className="clean-list">
+                            {(analysis.diet_plan?.foods_to_avoid || []).map(
+                              (item) => (
+                                <li key={item}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+
+                        <div className="list-card">
+                          <h4>Nutritional focus</h4>
+                          <ul className="clean-list">
+                            {(analysis.diet_plan?.nutritional_focus || []).map(
+                              (item) => (
+                                <li key={item}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+
+                        <div className="list-card">
+                          <h4>Supplements</h4>
+                          <ul className="clean-list">
+                            {(analysis.diet_plan?.supplements || []).map(
+                              (item) => (
+                                <li key={item}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+
+                        <div className="list-card">
+                          <h4>Meal suggestions</h4>
+                          <ul className="clean-list">
+                            {(analysis.diet_plan?.meal_suggestions || []).map(
+                              (item) => (
+                                <li key={item}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {analysisTab === "causes" ? (
+                      <div className="panel-stack">
+                        <div className="cause-grid">
+                          {(analysis.possible_causes || []).map((cause) => (
+                            <div
+                              key={`${cause.condition}-${cause.probability}`}
+                              className="cause-card"
+                            >
+                              <h4>{cause.condition}</h4>
+                              <div className="meta-row">
+                                <span className="meta-pill">
+                                  {cause.probability}
+                                </span>
+                                <span
+                                  className={`meta-pill ${getUrgencyTone(
+                                    cause.urgency_level,
+                                  )}`}
+                                >
+                                  {cause.urgency_level}
+                                </span>
+                                <span className="meta-pill">
+                                  {cause.ai_confidence}
+                                </span>
+                              </div>
+                              <p>{cause.description}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="callout-card callout-blue">
+                          <h3>Lifestyle suggestions</h3>
+                          <ul className="clean-list">
+                            {(analysis.lifestyle_suggestions || []).map(
+                              (item) => (
+                                <li key={item}>{item}</li>
+                              ),
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {analysisTab === "insights" ? (
+                      <div className="insight-grid">
+                        {(analysis.ai_insights || []).map((insight) => (
+                          <div
+                            key={`${insight.insight_type}-${insight.title}`}
+                            className="insight-card"
+                          >
+                            <h4>{insight.title}</h4>
+                            <div className="meta-row">
+                              <span className="meta-pill">
+                                {insight.insight_type}
+                              </span>
+                              <span className="meta-pill">
+                                {insight.evidence_level}
+                              </span>
+                            </div>
+                            <p>{insight.description}</p>
+                            <p>
+                              <strong>Recommendation:</strong>{" "}
+                              {insight.recommendation}
+                            </p>
                           </div>
                         ))}
                       </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </SectionCard>
+            ) : null}
+
+            {activeTab === "dashboard" ? (
+              isAuthenticated ? (
+                <SectionCard
+                  title="Health dashboard"
+                  subtitle="Summary views derived from your stored analyses."
+                  action={
+                    <button
+                      type="button"
+                      className="btn btn-soft"
+                      onClick={handlePatternAnalysis}
+                      disabled={patternLoading || isServiceDegraded}
+                    >
+                      {patternLoading
+                        ? "Generating patterns..."
+                        : "Run pattern analysis"}
+                    </button>
+                  }
+                >
+                  <div className="dashboard-panels">
+                    <div className="panel-stack">
+                      <div className="callout-card callout-blue">
+                        <h3>Symptom trend timeline</h3>
+                        {dashboard?.symptom_trends?.length ? (
+                          <ul className="timeline-list">
+                            {dashboard.symptom_trends.map((item, index) => (
+                              <li key={`${item.date}-${item.symptom}-${index}`}>
+                                <div className="timeline-title">
+                                  {item.symptom || "Unknown symptom"}
+                                </div>
+                                <div className="timeline-meta">
+                                  {formatDate(item.date)} • Severity{" "}
+                                  {item.severity_label || item.severity}
+                                </div>
+                                <div>
+                                  {item.summary || "No summary available."}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="empty-state">
+                            No trend data yet. Complete at least one analysis.
+                          </div>
+                        )}
+                      </div>
+
+                      {patternAnalysis ? (
+                        <div className="pattern-response">
+                          <h3>{patternAnalysis.analysis_type}</h3>
+                          <p>
+                            Confidence:{" "}
+                            <strong>{patternAnalysis.confidence}</strong> •
+                            Generated {formatDate(patternAnalysis.timestamp)}
+                          </p>
+                          <div className="panel-stack">
+                            {Object.entries(patternAnalysis.patterns || {}).map(
+                              ([key, values]) => (
+                                <div
+                                  key={key}
+                                  className="callout-card callout-purple"
+                                >
+                                  <h4>{toLabel(key)}</h4>
+                                  <ul className="clean-list">
+                                    {(values || []).map((item) => (
+                                      <li key={`${key}-${item}`}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="panel-stack">
+                      <div className="callout-card callout-green">
+                        <h3>Health score</h3>
+                        <p className="stat-value">
+                          {dashboard?.health_score ?? "—"}
+                        </p>
+                        <p>
+                          This score is derived from recent symptom severity
+                          patterns and should be interpreted only as educational
+                          guidance.
+                        </p>
+                      </div>
+
+                      <div className="callout-card callout-amber">
+                        <h3>Risk factors</h3>
+                        <ul className="clean-list">
+                          {(dashboard?.risk_factors || []).map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="callout-card callout-blue">
+                        <h3>Improvement areas</h3>
+                        <ul className="clean-list">
+                          {(dashboard?.improvement_areas || []).map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      <div className="callout-card callout-purple">
+                        <h3>AI recommendations</h3>
+                        <ul className="clean-list">
+                          {(dashboard?.ai_recommendations || []).map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                )}
+                </SectionCard>
+              ) : (
+                renderAuthRequired(
+                  "The dashboard uses your protected symptom history and is unavailable without sign-in.",
+                )
+              )
+            ) : null}
 
-                {activeTab === 'insights' && (
-                  <div className="space-y-6">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                      <svg className="w-6 h-6 text-purple-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      Advanced AI Insights
-                    </h3>
-                    
-                    <div className="space-y-6">
-                      {analysis.ai_insights.map((insight, index) => (
-                        <AIInsightCard key={index} insight={insight} />
+            {activeTab === "history" ? (
+              isAuthenticated ? (
+                <SectionCard
+                  title="Analysis history"
+                  subtitle="Every completed symptom analysis is stored for your authenticated account."
+                >
+                  {history.length ? (
+                    <div className="history-grid">
+                      {history.map((item) => (
+                        <div key={item.id} className="history-card">
+                          <h4>{item.symptom || "Unknown symptom"}</h4>
+                          <div className="meta-row">
+                            <span className="meta-pill">
+                              {item.severity || "Unspecified severity"}
+                            </span>
+                            <span className="meta-pill">
+                              {item.duration || "No duration"}
+                            </span>
+                            <span className="meta-pill">
+                              {formatDate(item.created_at)}
+                            </span>
+                          </div>
+                          {Object.keys(item.risk_assessment || {}).length ? (
+                            <ul className="clean-list">
+                              {Object.entries(item.risk_assessment).map(
+                                ([key, value]) => (
+                                  <li key={`${item.id}-${key}`}>
+                                    <strong>{toLabel(key)}:</strong>{" "}
+                                    {String(value)}
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          ) : (
+                            <p>
+                              No stored risk assessment details were found for
+                              this record.
+                            </p>
+                          )}
+                        </div>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Red Flags Warning - Always Visible */}
-            <div className="bg-red-50 border border-red-200 rounded-2xl shadow-xl">
-              <div className="p-8">
-                <h3 className="text-2xl font-bold text-red-800 mb-6 flex items-center">
-                  <svg className="w-6 h-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                  🚨 Seek Immediate Medical Attention If:
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {analysis.red_flags.map((flag, index) => (
-                    <div key={index} className="flex items-start p-4 bg-white rounded-lg border border-red-200">
-                      <svg className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 018 0z" />
-                      </svg>
-                      <span className="text-red-800 font-medium">{flag}</span>
+                  ) : (
+                    <div className="empty-state">
+                      No analyses stored yet. Run your first symptom analysis to
+                      build history.
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+                  )}
+                </SectionCard>
+              ) : (
+                renderAuthRequired(
+                  "History is protected because it is tied to your Google account.",
+                )
+              )
+            ) : null}
 
-            {/* Enhanced Medical Disclaimer */}
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl shadow-xl">
-              <div className="p-8">
-                <h3 className="text-xl font-bold text-amber-800 mb-4 flex items-center">
-                  <svg className="w-6 h-6 text-amber-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 018 0z" />
-                  </svg>
-                  🤖 AI Medical Disclaimer
-                </h3>
-                <div className="prose prose-amber max-w-none">
-                  <p className="text-amber-900 leading-relaxed whitespace-pre-line">{analysis.medical_disclaimer}</p>
-                </div>
-                <div className="mt-4 text-sm text-amber-700 bg-amber-100 rounded-lg p-3">
-                  <p><strong>Analysis Generated:</strong> {new Date(analysis.search_timestamp).toLocaleString()}</p>
-                  <p><strong>AI Confidence:</strong> High accuracy based on medical databases and pattern recognition</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
+            {activeTab === "assistant" ? (
+              isAuthenticated ? (
+                <SectionCard
+                  title="AI health assistant"
+                  subtitle="Ask follow-up questions based on your recent symptom activity."
+                >
+                  <div className="chat-shell">
+                    <form onSubmit={handleChatSubmit}>
+                      <div className="field-group">
+                        <label htmlFor="chatMessage">Your question</label>
+                        <textarea
+                          id="chatMessage"
+                          className="textarea"
+                          rows={4}
+                          value={chatMessage}
+                          onChange={(event) =>
+                            setChatMessage(event.target.value)
+                          }
+                          placeholder="Ask about symptoms, warning signs, or supportive next steps"
+                        />
+                      </div>
+                      <div className="button-row">
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={chatLoading || isServiceDegraded}
+                        >
+                          {chatLoading
+                            ? "Sending question..."
+                            : "Ask assistant"}
+                        </button>
+                      </div>
+                    </form>
 
-      {/* Enhanced Footer */}
-      <footer className="bg-gray-50 border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <div className="flex justify-center items-center space-x-4 mb-4">
-              <img 
-                src="https://images.pexels.com/photos/40568/medical-appointment-doctor-healthcare-40568.jpeg"
-                alt="Medical Professional"
-                className="w-12 h-12 rounded-full object-cover"
-              />
-              <div className="text-left">
-                <p className="text-gray-800 font-semibold">🤖 AI Health Assistant - Enhanced with AI</p>
-                <p className="text-sm text-gray-600">Evidence-based health guidance • Real-time research • Personalized recommendations</p>
-              </div>
-            </div>
-            <div className="flex justify-center space-x-6 text-sm text-gray-500">
-              <span>✨ AI-Powered Analysis</span>
-              <span>🔬 Evidence-Based</span>
-              <span>🎯 Personalized</span>
-              <span>🌐 Real-Time Research</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-4">Always consult with healthcare professionals for medical concerns</p>
+                    {chatResponse ? (
+                      <div className="chat-response">
+                        <p className="content-prose">{chatResponse.response}</p>
+                        <div className="suggestion-row">
+                          {(chatResponse.suggestions || []).map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              className="suggestion-chip"
+                              onClick={() => setChatMessage(item)}
+                            >
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                        {(chatResponse.follow_up_questions || []).length ? (
+                          <div className="callout-card callout-blue">
+                            <h4>Follow-up questions</h4>
+                            <ul className="clean-list">
+                              {chatResponse.follow_up_questions.map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </SectionCard>
+              ) : (
+                renderAuthRequired(
+                  "Assistant context is based on authenticated account history.",
+                )
+              )
+            ) : null}
+
+            {activeTab === "voice" ? (
+              isAuthenticated ? (
+                <SectionCard
+                  title="Voice symptom tools"
+                  subtitle="Paste recognized transcript text to detect likely symptom categories."
+                >
+                  <div className="tools-grid">
+                    <form onSubmit={handleVoiceSubmit}>
+                      <div className="form-grid">
+                        <div className="field-group form-grid-full">
+                          <label htmlFor="voiceText">Transcript text</label>
+                          <textarea
+                            id="voiceText"
+                            className="textarea"
+                            rows={5}
+                            value={voiceText}
+                            onChange={(event) =>
+                              setVoiceText(event.target.value)
+                            }
+                            placeholder="Example: I have had a headache and feel nauseous since yesterday"
+                          />
+                        </div>
+                        <div className="field-group">
+                          <label htmlFor="voiceConfidence">
+                            Transcript confidence
+                          </label>
+                          <input
+                            id="voiceConfidence"
+                            className="input"
+                            value={voiceConfidence}
+                            onChange={(event) =>
+                              setVoiceConfidence(event.target.value)
+                            }
+                            placeholder="0.90"
+                          />
+                        </div>
+                      </div>
+                      <div className="button-row">
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={voiceLoading || isServiceDegraded}
+                        >
+                          {voiceLoading
+                            ? "Processing transcript..."
+                            : "Analyze transcript"}
+                        </button>
+                      </div>
+                    </form>
+
+                    {voiceResponse ? (
+                      <div className="voice-response">
+                        <p>{voiceResponse.response}</p>
+                        <div className="meta-row">
+                          <span className="meta-pill">
+                            Confidence: {voiceResponse.confidence}
+                          </span>
+                          <span className="meta-pill">
+                            Status: {voiceResponse.status}
+                          </span>
+                        </div>
+                        {(voiceResponse.detected_symptoms || []).length ? (
+                          <div className="suggestion-row">
+                            {voiceResponse.detected_symptoms.map((item) => (
+                              <button
+                                key={item}
+                                type="button"
+                                className="suggestion-chip"
+                                onClick={() => {
+                                  setSymptom(item);
+                                  setActiveTab("analysis");
+                                  setSuccessMessage(
+                                    `Inserted detected symptom "${item}" into the analysis form.`,
+                                  );
+                                }}
+                              >
+                                Use "{item}" in analysis
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </SectionCard>
+              ) : (
+                renderAuthRequired("Voice analysis is a protected user tool.")
+              )
+            ) : null}
+
+            {activeTab === "research" ? (
+              isAuthenticated ? (
+                <SectionCard
+                  title="Research and literature search"
+                  subtitle="Search PubMed-backed literature notes for a symptom or topic."
+                >
+                  <div className="tools-grid">
+                    <form onSubmit={handleResearchSubmit}>
+                      <div className="search-row">
+                        <input
+                          className="search-input"
+                          value={researchQuery}
+                          onChange={(event) =>
+                            setResearchQuery(event.target.value)
+                          }
+                          placeholder="e.g. migraine nutrition, fatigue causes, nausea management"
+                        />
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={researchLoading || isServiceDegraded}
+                        >
+                          {researchLoading ? "Searching..." : "Search PubMed"}
+                        </button>
+                      </div>
+                    </form>
+
+                    {researchResponse ? (
+                      <div className="research-response">
+                        <p>
+                          Query: <strong>{researchResponse.query}</strong>
+                        </p>
+                        <p>
+                          Source count:{" "}
+                          <strong>{researchResponse.source_count}</strong>
+                        </p>
+                        <p className="content-prose">
+                          {researchResponse.results}
+                        </p>
+                        {researchResponse.pubmed_url ? (
+                          <p>
+                            <a
+                              href={researchResponse.pubmed_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open full PubMed search in a new tab
+                            </a>
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                </SectionCard>
+              ) : (
+                renderAuthRequired(
+                  "Literature search is protected because it is integrated into the authenticated product workflow.",
+                )
+              )
+            ) : null}
           </div>
         </div>
-      </footer>
+
+        <p className="footer-note">
+          This application provides educational guidance only. It does not
+          diagnose, treat, or replace licensed medical care. Seek urgent
+          professional care immediately for severe, rapidly worsening, or
+          red-flag symptoms.
+          {appLoading ? " Refreshing account data..." : ""}
+        </p>
+      </main>
     </div>
   );
 }
