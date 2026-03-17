@@ -4,6 +4,10 @@
 
 :root {
   color-scheme: light;
+  --page-background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 24%),
+    radial-gradient(circle at 82% 10%, rgba(250, 204, 21, 0.14), transparent 20%),
+    linear-gradient(180deg, #f8fbff 0%, #f4f8fd 42%, #eef4fb 100%);
 }
 
 * {
@@ -16,10 +20,7 @@ html {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 28%),
-    radial-gradient(circle at 85% 15%, rgba(250, 204, 21, 0.2), transparent 24%),
-    linear-gradient(180deg, #fcfeff 0%, #f3f9ff 50%, #eef7ff 100%);
+  background: var(--page-background);
 }
 
 a {
@@ -44,4 +45,23 @@ textarea {
 
 .section-shell {
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+.surface-card {
+  @apply rounded-[28px] border border-slate-200/80 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.06)];
+}
+
+.surface-muted {
+  @apply rounded-[24px] border border-slate-200/70 bg-slate-50/90;
+}
+
+.eyebrow {
+  @apply inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.24em] text-sky-700;
+}
+
+.subtle-grid {
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
 }

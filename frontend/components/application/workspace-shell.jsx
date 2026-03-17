@@ -434,11 +434,13 @@ export default function WorkspaceShell() {
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-xs font-black text-white">SH</span>
                   Smart Health Advisor AI
                 </Link>
-                <h1 className="mt-6 max-w-3xl font-display text-4xl font-black tracking-[-0.06em] text-slate-950 sm:text-5xl">
-                  A clearer health workspace with a stronger product story.
+                <h1 className="mt-5 max-w-3xl font-display text-3xl font-black tracking-[-0.05em] text-slate-950 sm:text-[2.6rem]">
+                  Health guidance that looks and behaves like a real SaaS product.
                 </h1>
-                <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
-                  Structured symptom analysis, protected history, dashboard summaries, follow-up guidance, voice helpers, and PubMed-backed research inside a modern Next.js flow.
+                <p className="mt-4 max-w-2xl text-sm leading-8 text-slate-600 sm:text-[15px]">
+                  Structured symptom analysis, protected history, dashboard summaries,
+                  follow-up guidance, voice helpers, and PubMed-backed research in one
+                  calmer workspace.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -448,6 +450,43 @@ export default function WorkspaceShell() {
                 <button type="button" onClick={() => handleLogout()} className="rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white">
                   Sign out
                 </button>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[0.78fr_1.22fr]">
+              <div className="surface-muted p-5">
+                <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                  Signed in account
+                </div>
+                <div className="mt-3 flex items-center gap-4">
+                  <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-sm font-black text-white">
+                    {(signedInUser?.name || "U").slice(0, 1)}
+                  </div>
+                  <div>
+                    <div className="text-base font-semibold text-slate-950">
+                      {signedInUser?.name || "Authenticated user"}
+                    </div>
+                    <div className="text-sm text-slate-500">
+                      {signedInUser?.email || "No email available"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="surface-muted p-5">
+                <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                  Active product surfaces
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2.5">
+                  {tabs.map((tab) => (
+                    <span
+                      key={tab}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600"
+                    >
+                      {labelize(tab)}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
