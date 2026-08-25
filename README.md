@@ -24,7 +24,7 @@ Browser
 
 ### Frontend
 
-Create `frontend/.env` from [frontend/.env.example](C:\Users\abhii\Desktop\Projects\Smart Health Advisor AI\frontend\.env.example).
+Create `frontend/.env` from `frontend/.env.example`.
 
 Required variables:
 
@@ -40,7 +40,7 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_web_client_id
 
 ### Backend
 
-Create `backend/.env` from [backend/.env.example](C:\Users\abhii\Desktop\Projects\Smart Health Advisor AI\backend\.env.example).
+Create `backend/.env` from `backend/.env.example`.
 
 Required variables:
 

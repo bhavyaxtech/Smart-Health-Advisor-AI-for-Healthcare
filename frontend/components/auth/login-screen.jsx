@@ -1,57 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import apiClient from "@/lib/api-client";
+import apiClient, { ApiError } from "@/lib/api-client";
 import { getStoredSession, setAuthSession } from "@/lib/session";
 
 const GOOGLE_CLIENT_ID = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "").trim();
+const GSI_SCRIPT_TIMEOUT_MS = 8000;
 
-function getGoogleCredential(clientId) {
-  return new Promise((resolve, reject) => {
-    if (!clientId) {
-      reject(new Error("Google sign-in is not configured."));
-      return;
-    }
-    if (!window.google?.accounts?.id) {
-      reject(new Error("Google sign-in is not ready yet. Please try again."));
-      return;
-    }
-    let settled = false;
-    const finish = (cb) => (val) => { if (settled) return; settled = true; cb(val); };
-    const resolveOnce = finish(resolve);
-    const rejectOnce = finish(reject);
-    const timeoutId = window.setTimeout(() => {
-      rejectOnce(new Error("Google sign-in timed out. Please try again."));
-    }, 60000);
-    window.google.accounts.id.initialize({
-      client_id: clientId,
-      callback: (response) => {
-        window.clearTimeout(timeoutId);
-        if (!response?.credential) { rejectOnce(new Error("Google sign-in did not return a credential.")); return; }
-        resolveOnce(response.credential);
-      },
-    });
-    window.google.accounts.id.prompt((notification) => {
-      if (settled) return;
-      const notDisplayed = typeof notification?.isNotDisplayed === "function" && notification.isNotDisplayed();
-      const skipped = typeof notification?.isSkippedMoment === "function" && notification.isSkippedMoment();
-      const dismissed = typeof notification?.isDismissedMoment === "function" && notification.isDismissedMoment();
-      if (notDisplayed || skipped || dismissed) {
-        window.clearTimeout(timeoutId);
-        rejectOnce(new Error("Google sign-in could not be completed."));
-      }
-    });
-  });
+function getGoogleErrorMessage(error) {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return "Sign-in failed. Please try again.";
 }
 
 export default function LoginScreen() {
   const router = useRouter();
+  const googleButtonRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [health, setHealth] = useState(null);
+  const [scriptFailed, setScriptFailed] = useState(false);
 
   useEffect(() => {
     if (getStoredSession()?.token) router.replace("/app");
@@ -71,21 +46,65 @@ export default function LoginScreen() {
     return () => { cancelled = true; };
   }, []);
 
-  async function handleLogin() {
-    setError("");
-    setLoading(true);
-    try {
-      const idToken = await getGoogleCredential(GOOGLE_CLIENT_ID);
-      const authPayload = await apiClient.authenticateWithGoogle(idToken);
-      setAuthSession(authPayload);
-      apiClient.setToken(authPayload.access_token);
-      router.push("/app");
-    } catch {
-      setError("Sign-in failed. Please try again.");
-    } finally {
-      setLoading(false);
+  const handleCredentialResponse = useCallback(
+    async (response) => {
+      setError("");
+      setLoading(true);
+      try {
+        if (!response?.credential) {
+          throw new Error("Google sign-in did not return a credential.");
+        }
+        const authPayload = await apiClient.authenticateWithGoogle(response.credential);
+        setAuthSession(authPayload);
+        apiClient.setToken(authPayload.access_token);
+        router.push("/app");
+      } catch (caughtError) {
+        setError(getGoogleErrorMessage(caughtError));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router]
+  );
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return undefined;
+
+    let cancelled = false;
+
+    function initGoogle(attempt) {
+      if (cancelled || !googleButtonRef.current) return;
+
+      const gsi = window.google?.accounts?.id;
+      if (!gsi) {
+        if (attempt * 100 >= GSI_SCRIPT_TIMEOUT_MS) {
+          setScriptFailed(true);
+          return;
+        }
+        window.setTimeout(() => initGoogle(attempt + 1), 100);
+        return;
+      }
+
+      gsi.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+      });
+      gsi.renderButton(googleButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        logo_alignment: "left",
+        width: 320,
+      });
     }
-  }
+
+    initGoogle(0);
+    return () => {
+      cancelled = true;
+    };
+  }, [handleCredentialResponse]);
 
   const healthDot = health
     ? health.status === "healthy"
@@ -137,42 +156,33 @@ export default function LoginScreen() {
           {/* Divider */}
           <div className="mt-6 border-t border-[rgba(20,16,8,0.07)]" />
 
-          {/* Google button — white bg, colored G */}
-          <button
-            type="button"
-            onClick={handleLogin}
-            disabled={loading}
-            className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-[12px] border border-stone-200 bg-white px-6 py-3.5 text-sm font-medium text-stone-700 transition duration-200 hover:-translate-y-px hover:border-stone-300 hover:shadow-[0_4px_16px_rgba(20,16,8,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          {/* Official Google Sign-In button target */}
+          <div className="relative mt-6 flex min-h-[48px] items-center justify-center">
+            <div ref={googleButtonRef} className={loading ? "pointer-events-none opacity-40" : ""} />
             {loading ? (
-              <>
+              <div className="absolute inset-0 z-10 flex items-center justify-center gap-3 rounded-[12px] border border-stone-200 bg-white/90 text-sm font-medium text-stone-700">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-stone-300 border-t-stone-700" />
                 Signing in...
-              </>
-            ) : (
-              <>
-                {/* Colored Google G icon */}
-                <svg viewBox="0 0 18 18" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-                  <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908C16.658 14.013 17.64 11.705 17.64 9.2z" />
-                  <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" />
-                  <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
-                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
-                </svg>
-                Continue with Google
-              </>
-            )}
-          </button>
+              </div>
+            ) : null}
+          </div>
 
           {/* Config warning */}
           {!GOOGLE_CLIENT_ID ? (
             <div className="mt-4 rounded-[12px] border border-[rgba(201,112,34,0.25)] bg-[rgba(201,112,34,0.08)] px-4 py-3 text-sm text-amber-800">
-              Google sign-in is currently unavailable in this environment.
+              Google sign-in is not configured. Set{" "}
+              <code className="rounded bg-[rgba(201,112,34,0.12)] px-1 py-0.5 text-xs">NEXT_PUBLIC_GOOGLE_CLIENT_ID</code>{" "}
+              in <code className="rounded bg-[rgba(201,112,34,0.12)] px-1 py-0.5 text-xs">frontend/.env</code> and restart the dev server.
+            </div>
+          ) : scriptFailed ? (
+            <div className="mt-4 rounded-[12px] border border-[rgba(201,112,34,0.25)] bg-[rgba(201,112,34,0.08)] px-4 py-3 text-sm text-amber-800">
+              The Google sign-in script could not load. Check your connection or any content blockers and refresh.
             </div>
           ) : null}
 
           {/* Error */}
           {error ? (
-            <div className="mt-4 rounded-[12px] border border-[rgba(201,112,34,0.3)] bg-[rgba(201,112,34,0.09)] px-4 py-3 text-sm text-amber-800">
+            <div role="alert" className="mt-4 rounded-[12px] border border-[rgba(180,40,20,0.28)] bg-[rgba(180,40,20,0.07)] px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           ) : null}
