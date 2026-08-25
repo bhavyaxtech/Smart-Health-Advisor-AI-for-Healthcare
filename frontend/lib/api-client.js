@@ -2,6 +2,8 @@ const API_BASE = (process.env.NEXT_PUBLIC_BACKEND_URL || "")
   .trim()
   .replace(/\/+$/, "");
 
+const DEFAULT_TIMEOUT_MS = 30000;
+
 function buildUrl(path) {
   if (!path.startsWith("/api/")) {
     throw new Error(`API path must start with "/api/": ${path}`);
@@ -86,7 +88,7 @@ class ApiClient {
   }
 
   async request(path, options = {}) {
-    const { method = "GET", body, headers = {}, requiresAuth = false } = options;
+    const { method = "GET", body, headers = {}, requiresAuth = false, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
 
     if (requiresAuth && !this.token) {
       throw new ApiError("You need to sign in with Google first.", 401);
@@ -102,8 +104,16 @@ class ApiClient {
           ...headers,
         },
         body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
+      if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+        throw new ApiError(
+          "The server did not respond in time. Is the backend running and is NEXT_PUBLIC_BACKEND_URL correct?",
+          0,
+          null
+        );
+      }
       throw new ApiError(
         error?.message || "Unable to reach the backend service.",
         0,
